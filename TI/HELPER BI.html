@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Helper BI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #020617;
+      color: #e5e7eb;
+    }
+
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #020617;
+      border-radius: 16px;
+      padding: 20px 24px;
+      border: 1px solid #1f2937;
+      box-shadow: 0 18px 40px rgba(15,23,42,0.8);
+      margin-top: 24px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0 0 8px 0;
+    }
+
+    h2 {
+      font-size: 16px;
+      margin: 16px 0 6px 0;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      background: #020617;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      background: #020617;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      overflow-x: auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #0f172a;
+      border: 1px solid #1f2937;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      opacity: .9;
+      margin-bottom: 10px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #374151;
+      font-size: 11px;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+
+    ul {
+      padding-left: 18px;
+      margin: 4px 0 10px 0;
+      font-size: 13px;
+      color: #d1d5db;
+    }
+
+    p {
+      font-size: 13px;
+      color: #e5e7eb;
+      margin: 4px 0 10px 0;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    function getParams() {
+      const sp = new URLSearchParams(window.location.search);
+      const obj = {};
+      for (const [k, v] of sp.entries()) {
+        if (obj[k] !== undefined) {
+          if (!Array.isArray(obj[k])) obj[k] = [obj[k]];
+          obj[k].push(v);
+        } else {
+          obj[k] = v;
+        }
+      }
+      return { sp, obj };
+    }
+
+    function tentarFechar(ms = 700) {
+      setTimeout(() => {
+        try {
+          window.close();
+        } catch (e) {
+          // alguns navegadores bloqueiam, sem drama
+        }
+      }, ms);
+    }
+
+    async function copiarTexto(texto) {
+      if (!texto) return;
+
+      // API moderna
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(texto);
+        return;
+      }
+
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = texto;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+
+    function executarFuncaoSilenciosa() {
+      const { sp, obj } = getParams();
+
+      // alias curto/normal
+      const funcao = (obj.funcao || obj.f || "").toLowerCase();
+
+      // 1) COPIAR
+      if (funcao === "copiar") {
+        // texto ou t
+        let texto = obj.texto || obj.t || "";
+        // se vier URL-encoded, decodeURIComponent resolve; se já vier normal, a maioria dos casos ainda funciona
+        try {
+          texto = decodeURIComponent(texto);
+        } catch (e) { /* ignora decode error */ }
+
+        copiarTexto(texto)
+          .catch(() => {})
+          .finally(() => tentarFechar());
+        return;
+      }
+
+      // 2) ABRIR LINKS
+      if (funcao === "abrirlinks") {
+        let links = [];
+
+        if (obj.link) {
+          if (Array.isArray(obj.link)) links = links.concat(obj.link);
+          else links.push(obj.link);
+        }
+        if (obj.l) {
+          if (Array.isArray(obj.l)) links = links.concat(obj.l);
+          else links.push(obj.l);
+        }
+
+        links.forEach(l => {
+          if (!l) return;
+          let url = l;
+          try {
+            url = decodeURIComponent(l);
+          } catch (e) { /* ignore */ }
+          window.open(url, "_blank", "noopener");
+        });
+
+        tentarFechar();
+        return;
+      }
+
+      // 3) CHAMAR SCRIPT / BACKEND (Google Apps Script etc.)
+      if (funcao === "chamarscript") {
+        const base = obj.url || obj.u;
+        if (!base) {
+          tentarFechar();
+          return;
+        }
+
+        // monta query com todos os parâmetros exceto funcao/f e url/u
+        const spOut = new URLSearchParams();
+        for (const [k, v] of sp.entries()) {
+          if (k === "funcao" || k === "f" || k === "url" || k === "u") continue;
+          spOut.append(k, v);
+        }
+        const qs = spOut.toString();
+        const full =
+          base + (base.includes("?") ? "&" : "?") + qs;
+
+        // "fire and forget" sem se importar com CORS
+        const img = new Image();
+        img.src = full;
+
+        tentarFechar(1200);
+        return;
+      }
+
+      // 4) REDIRECT SIMPLES
+      if (funcao === "redirect") {
+        const raw = obj.url || obj.u;
+        if (!raw) {
+          tentarFechar();
+          return;
+        }
+        let destino = raw;
+        try {
+          destino = decodeURIComponent(raw);
+        } catch (e) { /* ignore */ }
+
+        // redireciona e não precisa fechar (o próprio redirect substitui)
+        window.location.replace(destino);
+        return;
+      }
+
+      // se chegou aqui e não tem função conhecida, só tenta fechar
+      tentarFechar();
+    }
+
+    function mostrarAjuda() {
+      const { obj } = getParams();
+
+      document.body.innerHTML = "";
+      const wrap = document.createElement("div");
+      wrap.className = "wrap";
+
+      wrap.innerHTML = `
+        <div class="card">
+          <div class="badge">Helper BI – Funções disponíveis</div>
+          <h1>Como usar este helper via URL</h1>
+          <p>
+            Este HTML foi pensado para ser chamado pelo Power BI, Power Automate, etc.
+            Normalmente ele não mostra nada: apenas executa a função e fecha a aba/janela.
+            <br/>
+            Se você colocar <code>?funcoes</code> na URL, esta página de ajuda aparece.
+          </p>
+
+          <p class="hint">
+            Parâmetros aceitos têm sempre duas versões: uma mais longa (ex.: <code>funcao</code>)
+            e uma curta (ex.: <code>f</code>) para economizar caracteres na URL.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>1. Copiar texto para a área de transferência</h2>
+          <span class="pill">funcao=copiar</span>
+          <span class="pill">ou f=copiar</span>
+
+          <p>
+            Copia o texto informado para a área de transferência e tenta fechar a janela em seguida.
+          </p>
+          <ul>
+            <li><code>texto</code> ou <code>t</code>: texto a ser copiado (de preferência URL-encoded).</li>
+          </ul>
+
+          <pre>
+// Exemplo:
+https://seuusuario.github.io/seu-repo/helper.html
+  ?funcao=copiar
+  &texto=23251007047251000170660001868026311011951730
+
+// Versão curta:
+.../helper.html?f=copiar&t=23251007047251000170660001868026311011951730
+          </pre>
+
+          <p class="hint">
+            Ideal para copiar chave de acesso, protocolos, códigos grandes etc. a partir de botões no Power BI.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>2. Abrir vários links em abas diferentes</h2>
+          <span class="pill">funcao=abrirlinks</span>
+          <span class="pill">ou f=abrirlinks</span>
+
+          <p>
+            Abre um ou mais links em novas abas e tenta fechar a aba do helper logo em seguida.
+          </p>
+          <ul>
+            <li><code>link</code> ou <code>l</code>: pode repetir o parâmetro várias vezes para vários links.</li>
+          </ul>
+
+          <pre>
+// Exemplo:
+.../helper.html?funcao=abrirlinks
+  &link=https%3A%2F%2Fapp.powerbi.com%2Fview%3F...
+  &link=https%3A%2F%2Fseusite.com%2Fmanual.html
+
+// Versão curta:
+.../helper.html?f=abrirlinks
+  &l=https%3A%2F%2Fapp.powerbi.com%2Fview%3F...
+  &l=https%3A%2F%2Fseusite.com%2Fmanual.html
+          </pre>
+
+          <p class="hint">
+            Útil para abrir relatório + manual + formulário de feedback de uma vez só.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>3. Chamar Google Apps Script / backend</h2>
+          <span class="pill">funcao=chamarScript</span>
+          <span class="pill">ou f=chamarScript</span>
+
+          <p>
+            Dispara uma chamada GET para uma URL de backend (por exemplo um Web App do Google Apps Script),
+            repassando todos os parâmetros da URL (exceto o próprio <code>funcao</code> / <code>f</code> e
+            <code>url</code> / <code>u</code>).
+          </p>
+          <ul>
+            <li><code>url</code> ou <code>u</code>: URL base do script/backend a ser chamado.</li>
+            <li>Qualquer outro parâmetro será repassado para o backend.</li>
+          </ul>
+
+          <pre>
+// Exemplo com Google Apps Script:
+.../helper.html?funcao=chamarScript
+  &url=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FSEU_ID%2Fexec
+  &painel=EXTRATO
+  &usuario=paulo
+  &acao=A
+
+// Versão curta:
+.../helper.html?f=chamarScript
+  &u=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FSEU_ID%2Fexec
+  &p=EXTRATO
+  &uemail=paulo
+  &a=A
+          </pre>
+
+          <p class="hint">
+            No backend você grava em uma Sheet, faz log de acesso, dispara e-mail, etc.
+            O helper só "pinga" a URL e fecha.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>4. Redirecionar para uma URL</h2>
+          <span class="pill">funcao=redirect</span>
+          <span class="pill">ou f=redirect</span>
+
+          <p>
+            Redireciona o navegador para a URL informada. Útil para ter um "apelido" curto
+            no BI que aponta para um link maior.
+          </p>
+          <ul>
+            <li><code>url</code> ou <code>u</code>: URL de destino (de preferência URL-encoded).</li>
+          </ul>
+
+          <pre>
+// Exemplo:
+.../helper.html?funcao=redirect
+  &url=https%3A%2F%2Fapp.powerbi.com%2Fview%3F...
+
+// Versão curta:
+.../helper.html?f=redirect
+  &u=https%3A%2F%2Fapp.powerbi.com%2Fview%3F...
+          </pre>
+
+          <p class="hint">
+            Se quiser evoluir para um roteador por "apelido", basta no futuro manter
+            um map de códigos &rarr; URLs aqui dentro do próprio HTML.
+          </p>
+        </div>
+
+        <div class="card">
+          <h2>5. Modo ajuda</h2>
+          <span class="pill">?funcoes</span>
+
+          <p>
+            Para ver esta tela de ajuda novamente, basta abrir o HTML com
+            <code>?funcoes</code> na query string. Por exemplo:
+          </p>
+
+          <pre>
+https://seuusuario.github.io/seu-repo/helper.html?funcoes
+          </pre>
+
+          <p class="hint">
+            Em qualquer outro caso (sem <code>?funcoes</code>), o helper executa
+            a função indicada e não mostra nada para o usuário final.
+          </p>
+        </div>
+      `;
+
+      document.body.appendChild(wrap);
+    }
+
+    (function init() {
+      const { sp } = getParams();
+
+      // se tiver ?funcoes na URL (independente de valor), mostra ajuda
+      if (sp.has("funcoes")) {
+        mostrarAjuda();
+        return;
+      }
+
+      // caso contrário, executa silenciosamente
+      executarFuncaoSilenciosa();
+    })();
+  </script>
+</body>
+</html>
