@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>ADM - PROCESSAMENTO DE FATURAS DE ENERGIA</title>
+  <title>ADM - PROCESSADOR DE FATURAS DE ENERGIA</title>
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/LOGO_PeD.png">
 
   <!-- pdf.js via CDN -->
@@ -522,465 +522,8 @@
     }
   </style>
 
-  <script>
-    // Config pdf.js
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+<script src="./app.min.js"></script>
 
-    // Estado global
-    let pagesTexts = [];
-    let currentTipo = "enel";
-
-    // Config de cada tipo de fatura
-    const TIPO_CONFIG = {
-      enel: {
-        nome: "Enel",
-        logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png",
-        formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=h32KRtw5kEm37B9iNhACUjf5h_f9p5hIqNFizEk4SxdUQVAxRFlZQ0g5OVJEOEUxNEpLRENEQ0pNViQlQCN0PWcu&rebef1295d570419382cb678408ce6b56=%22Enel%22"
-      },
-      equatorial: {
-        nome: "Equatorial",
-        logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/equatorial_logo.png",
-        formUrl: "https://forms.office.com/SEU_LINK_EQUATORIAL_AQUI"
-      },
-      outro: {
-        nome: "Outro modelo",
-        logo: "",
-        formUrl: ""
-      }
-    };
-
-    // Pós-processamento de texto
-    function cleanText(text) {
-      let t = text;
-
-      if (t.normalize) {
-        t = t.normalize("NFC");
-      }
-
-      t = t.replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\u024F]/g, "");
-      t = t.replace(/(\S)\s+([ÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇáàâãéèêíìîóòôõúùûç])/g, "$1$2");
-      t = t.replace(/([ÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇáàâãéèêíìîóòôõúùûç])\s+(\S)/g, "$1$2");
-      t = t.replace(/([a-záàâãéèêíìîóòôõúùûç])([A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ])/g, "$1 $2");
-      t = t.replace(/ {2,}/g, " ");
-
-      return t;
-    }
-
-    // Extrai texto de cada página
-    async function extractTextFromPDF(file) {
-      const arrayBuffer = await file.arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
-
-      let pages = [];
-
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const content = await page.getTextContent();
-        const strings = content.items.map(item => item.str);
-
-        const rawPageText = strings.join(" ");
-        const pageText = cleanText(rawPageText).trim();
-
-        pages.push(pageText);
-      }
-
-      return pages;
-    }
-
-    // Parser específico ENEL (versão com novos campos)
-    function parseEnelFaturas(pages) {
-      const resultados = [];
-
-      pages.forEach((txt, idx) => {
-        // só páginas que têm o documento auxiliar
-        if (!/DOCUMENTO AUXILIAR DA NOTA FISCAL DE ENERGIA ELÉTRICA ELETRÔNICA/i.test(txt)) {
-          return;
-        }
-
-        // bloco principal: inscrição estadual, número cliente, mês/ano, vencimento, total
-        const main = txt.match(
-          /INSC\. EST:\s*\d+\s+(\d+)\s+(\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+R\$ ?([\d.,]+)/i
-        );
-
-        if (!main) {
-          return;
-        }
-
-        const numCliente = main[1];
-        const mesAno     = main[2];
-        const vencimento = main[3];
-        const total      = main[4];
-
-        // CNPJ
-        const cnpjMatch = txt.match(/CPF\/CNPJ:\s*([0-9./-]+)/i);
-        const cnpj = cnpjMatch ? cnpjMatch[1].trim() : "";
-
-        // Nota fiscal
-        const nfMatch = txt.match(/NOTA FISCAL Nº?\s*([\d]+)/i);
-        const notaFiscal = nfMatch ? nfMatch[1] : "";
-
-        // Chave de acesso (juntando os dígitos)
-        const chaveMatch = txt.match(/chave de acesso:\s*([\d ]{30,})/i);
-        let chaveAcesso = "";
-        if (chaveMatch) {
-          chaveAcesso = chaveMatch[1].replace(/\s+/g, "");
-        }
-
-        // Endereço / Município / UF / CEP (usando a mesma lógica do script antigo)
-        let endereco = "";
-        let municipio = "";
-        let uf = "";
-        let cep = "";
-
-        // Trecho entre "MONOFÁSICO" e "CPF/CNPJ:" – igual ao script antigo,
-        // aqui sempre vem: NOME DA EMPRESA + ENDEREÇO COMPLETO + CEP + ...
-        const clienteBlocoMatch = txt.match(/MONOF[ÁA]SICO\s+(.+?)\s+CPF\/CNPJ:/i);
-
-        if (clienteBlocoMatch) {
-          let bloco = clienteBlocoMatch[1]
-            .trim()
-            .replace(/\s{2,}/g, " ");
-
-          // Se começar com o nome da empresa, remove pra ficar só endereço
-          // (ajusta aqui se tiver outras empresas além da Mobit)
-          bloco = bloco.replace(/^MOBIT MOBILIDADE ILUM E TEC LTDA\s*/i, "");
-
-          // CEP
-          const cepMatch = bloco.match(/CEP:\s*(\d{5}-\d{3})/i);
-          if (cepMatch) {
-            cep = cepMatch[1];
-          }
-
-          // ENDERECO = tudo antes do "CEP:"
-          const endMatch = bloco.match(/(.+?)\s+CEP:/i);
-          if (endMatch) {
-            endereco = endMatch[1].trim();
-          } else {
-            // fallback: se não achar "CEP:", deixa o bloco todo
-            endereco = bloco;
-          }
-
-          // MUNICÍPIO + UF = parte final antes do "CEP:"
-          // Ex.: "HORIZONTE CENTRO CE CEP: 62882-000"
-          const muniUfMatch = bloco.match(/([A-ZÀ-Ú][A-Za-zÀ-ú ]+)\s+([A-Z]{2})\s+CEP:/);
-          if (muniUfMatch) {
-            municipio = muniUfMatch[1].trim(); // HORIZONTE CENTRO
-            uf        = muniUfMatch[2].trim(); // CE
-          }
-        }
-
-
-        // Bandeira tarifária
-        let bandeiraTarifaria = "";
-        const bandMatch = txt.match(/Band\.\s*Tarif\.\s*:\s*([A-Za-zÀ-ú]+)\s*:/i);
-        if (bandMatch) {
-          bandeiraTarifaria = bandMatch[1].trim();
-        }
-
-        // Dados de medição (tabelinha com datas e consumo)
-        // Ex.: 23/09/2025 1706.0 23/10/2025 1794.0 1.0 88.0 31
-        let dataLeituraAnterior = "";
-        let dataLeituraAtual = "";
-        let numeroDias = "";
-        let consumoKwh = "";
-
-        const leituraMatch = txt.match(
-          /(\d{2}\/\d{2}\/\d{4})\s+(\d+\.\d+)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)\s+(\d+)\s*/
-        );
-
-        if (leituraMatch) {
-          dataLeituraAnterior = leituraMatch[1];
-          dataLeituraAtual    = leituraMatch[3];
-          consumoKwh          = leituraMatch[6]; // 88.0
-          numeroDias          = leituraMatch[7]; // 31
-        }
-
-        resultados.push({
-          pagina: idx + 1,
-          cnpj,
-          numCliente,
-          endereco,
-          municipio,
-          uf,
-          cep,
-          mesAno,
-          vencimento,
-          total,
-          bandeiraTarifaria,
-          dataLeituraAnterior,
-          dataLeituraAtual,
-          numeroDias,
-          consumoKwh,
-          chaveAcesso,
-          notaFiscal,
-          textoBruto: txt
-        });
-      });
-
-      return resultados;
-    }
-
-    function hideGlobalLoader() {
-      const loader = document.getElementById("loader");
-      if (loader) loader.style.display = "none";
-    }
-
-    window.addEventListener("load", () => {
-      setTimeout(hideGlobalLoader, 5000);
-      updateTipoUI();
-    });
-
-    function setTipo(tipo) {
-      currentTipo = tipo;
-      updateTipoUI();
-    }
-
-    function updateTipoUI() {
-      const cfg = TIPO_CONFIG[currentTipo];
-      const distLogo = document.getElementById("distLogo");
-      const distLabel = document.getElementById("distLabel");
-      const registerBtn = document.getElementById("registerButton");
-      const tipoNomeSpan = document.getElementById("tipoNomeSpan");
-
-      if (cfg.logo) {
-        distLogo.src = cfg.logo;
-        distLogo.style.opacity = "1";
-      } else {
-        distLogo.src = "";
-        distLogo.style.opacity = "0.2";
-      }
-
-      distLabel.textContent = cfg.nome
-        ? `Tipo selecionado: ${cfg.nome}`
-        : "Selecione o tipo de fatura acima.";
-
-      if (tipoNomeSpan) {
-        tipoNomeSpan.textContent = cfg.nome || "—";
-      }
-
-      if (cfg.formUrl) {
-        registerBtn.disabled = false;
-        registerBtn.textContent = `Registrar fatura (${cfg.nome})`;
-      } else {
-        registerBtn.disabled = true;
-        registerBtn.textContent = "Registrar fatura (tipo sem formulário)";
-      }
-    }
-
-    async function handleFileChange() {
-      const fileInput     = document.getElementById("pdfFile");
-      const status        = document.getElementById("status");
-      const button        = document.getElementById("convertButton");
-      const resultDiv     = document.getElementById("result");
-      const resultLoader  = document.getElementById("resultLoader");
-      const resultInner   = document.getElementById("resultInner");
-      const pageCountSpan = document.getElementById("pageCountSpan");
-
-      const file = fileInput.files[0];
-      if (!file) {
-        alert("Escolha um PDF primeiro.");
-        return;
-      }
-
-      if (file.type !== "application/pdf") {
-        alert("Selecione um arquivo PDF (.pdf).");
-        return;
-      }
-
-      pagesTexts = [];
-      resultDiv.style.display = "block";
-      resultLoader.style.display = "flex";
-      resultInner.style.display  = "none";
-      status.textContent = "Lendo PDF, aguarde...";
-      button.disabled = true;
-
-      try {
-        const pages = await extractTextFromPDF(file);
-        pagesTexts = pages;
-
-        if (pageCountSpan) {
-          pageCountSpan.textContent = pagesTexts.length;
-        }
-
-        status.textContent = "Pronto! PDF lido com sucesso.";
-        resultLoader.style.display = "none";
-        resultInner.style.display  = "block";
-      } catch (err) {
-        console.error(err);
-        status.textContent = "Erro ao ler o PDF. Veja o console para detalhes.";
-        alert("Deu erro ao ler o PDF.");
-        resultLoader.style.display = "none";
-        resultInner.style.display  = "none";
-        resultDiv.style.display    = "none";
-      } finally {
-        button.disabled = false;
-      }
-    }
-
-    // Gera XLSX conforme o tipo atual
-    async function downloadXlsx() {
-      const status = document.getElementById("status");
-
-      if (!pagesTexts || pagesTexts.length === 0) {
-        alert("Nenhum texto de página encontrado. Converta o PDF primeiro.");
-        return;
-      }
-
-      try {
-        const workbook = new ExcelJS.Workbook();
-        const sheet = workbook.addWorksheet("FATURAS");
-
-        if (currentTipo === "enel") {
-          const faturas = parseEnelFaturas(pagesTexts);
-
-          if (faturas.length === 0) {
-            alert("Nenhuma fatura ENEL padrão encontrada no texto.");
-            return;
-          }
-
-          const rows = faturas.map(f => [
-            f.pagina,
-            f.cnpj,
-            f.numCliente,
-            f.endereco,
-            f.municipio,
-            f.uf,
-            f.cep,
-            f.mesAno,
-            f.vencimento,
-            f.total,
-            f.bandeiraTarifaria,
-            f.dataLeituraAnterior,
-            f.dataLeituraAtual,
-            f.numeroDias,
-            f.consumoKwh,
-            f.chaveAcesso,
-            f.notaFiscal,
-            f.textoBruto
-          ]);
-
-          sheet.addTable({
-            name: "FATURAS",
-            ref: "A1",
-            headerRow: true,
-            totalsRow: false,
-            style: {
-              theme: "TableStyleMedium2",
-              showRowStripes: true
-            },
-            columns: [
-              { name: "PAGINA",              filterButton: true },
-              { name: "CNPJ",                filterButton: true },
-              { name: "NUM_CLIENTE",         filterButton: true },
-              { name: "ENDERECO",            filterButton: true },
-              { name: "MUNICIPIO",           filterButton: true },
-              { name: "UF",                  filterButton: true },
-              { name: "CEP",                 filterButton: true },
-              { name: "MES_ANO",             filterButton: true },
-              { name: "VENCIMENTO",          filterButton: true },
-              { name: "TOTAL",               filterButton: true },
-              { name: "BANDEIRA_TARIFARIA",  filterButton: true },
-              { name: "DT_LEIT_ANTERIOR",    filterButton: true },
-              { name: "DT_LEIT_ATUAL",       filterButton: true },
-              { name: "NUM_DIAS",            filterButton: true },
-              { name: "CONSUMO_KWH",         filterButton: true },
-              { name: "CHAVE_ACESSO",        filterButton: true },
-              { name: "NOTA_FISCAL",         filterButton: true },
-              { name: "TEXTO_BRUTO",         filterButton: false }
-            ],
-            rows: rows
-          });
-
-          sheet.getColumn(1).width  = 8;   // pagina
-          sheet.getColumn(2).width  = 22;  // cnpj
-          sheet.getColumn(3).width  = 14;  // num cliente
-          sheet.getColumn(4).width  = 45;  // endereco
-          sheet.getColumn(5).width  = 20;  // municipio
-          sheet.getColumn(6).width  = 6;   // uf
-          sheet.getColumn(7).width  = 12;  // cep
-          sheet.getColumn(8).width  = 10;  // mes/ano
-          sheet.getColumn(9).width  = 12;  // vencimento
-          sheet.getColumn(10).width = 14;  // total
-          sheet.getColumn(11).width = 16;  // bandeira
-          sheet.getColumn(12).width = 14;  // dt leit ant
-          sheet.getColumn(13).width = 14;  // dt leit atual
-          sheet.getColumn(14).width = 10;  // dias
-          sheet.getColumn(15).width = 14;  // consumo
-          sheet.getColumn(16).width = 32;  // chave
-          sheet.getColumn(17).width = 14;  // nf
-          sheet.getColumn(18).width = 120; // texto bruto
-
-        } else {
-          // Genérico para Equatorial / Outros: página + texto bruto
-          const rows = pagesTexts.map((txt, idx) => [idx + 1, txt]);
-
-          sheet.addTable({
-            name: "FATURAS",
-            ref: "A1",
-            headerRow: true,
-            totalsRow: false,
-            style: {
-              theme: "TableStyleMedium9",
-              showRowStripes: true
-            },
-            columns: [
-              { name: "PAGINA",      filterButton: true },
-              { name: "TEXTO_BRUTO", filterButton: false }
-            ],
-            rows: rows
-          });
-
-          sheet.getColumn(1).width = 8;
-          sheet.getColumn(2).width = 120;
-        }
-
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob(
-          [buffer],
-          { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
-        );
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = currentTipo === "enel"
-          ? "FATURAS_ENEL.xlsx"
-          : "FATURAS.xlsx";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        status.textContent = "Arquivo Excel gerado com sucesso.";
-      } catch (e) {
-        console.error(e);
-        alert("Erro ao gerar o arquivo Excel.");
-        status.textContent = "Erro ao gerar o arquivo Excel.";
-      }
-    }
-
-    function openFormAtual() {
-      const cfg = TIPO_CONFIG[currentTipo];
-      if (!cfg.formUrl) {
-        alert("Formulário não configurado para este tipo de fatura.");
-        return;
-      }
-      window.open(cfg.formUrl, "_blank");
-    }
-
-    function openPainel() {
-      const url = "https://app.powerbi.com/SEU_LINK_PAINEL_AQUI";
-
-      if (url.indexOf("SEU_LINK_PAINEL_AQUI") !== -1) {
-        alert("URL do Painel de Acompanhamento ainda não configurada.");
-        return;
-      }
-
-      window.open(url, "_blank");
-    }
-  </script>
 </head>
 <body>
   <!-- Loader global -->
@@ -1171,5 +714,36 @@
       </div>
     </div>
   </div>
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  document.addEventListener('keydown', e => {
+    const k = (e.key || '').toUpperCase();
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && k === 'U') ||
+      (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(k))
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
+
+  (function(){
+    let trips = 0;
+    setInterval(() => {
+      const t0 = performance.now();
+      debugger;
+      const dt = performance.now() - t0;
+      if (dt > 120) {
+        trips++;
+        if (trips >= 2) document.documentElement.innerHTML = "";
+      } else {
+        trips = Math.max(0, trips - 1);
+      }
+    }, 700);
+  })();
+</script>
 </body>
 </html>
