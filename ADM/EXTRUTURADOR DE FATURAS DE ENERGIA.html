@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>ADM - EXTRUTURADOR DE FATURAS DE ENERGIA</title>
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/LOGO_PeD.png">
+
+  <!-- pdf.js via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- ExcelJS para gerar XLSX com TABELA de verdade -->
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+  <!-- PDF-LIB (mesclar PDFs) -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 16px;
+      background: #111827;
+      color: #e5e7eb;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin-bottom: 8px;
+      text-align: left;
+    }
+
+    /* HEADER FORA DO CARD (logo + suporte) */
+    .top-header {
+      position: relative;
+      max-width: 900px;
+      margin: 16px auto 0;
+      padding: 0 20px;
+      box-sizing: border-box;
+    }
+
+    .header-logo-container {
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .header-logo {
+      max-width: 220px;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .support-info {
+      right: 20px;
+      font-size: 11px;
+      color: #9ca3af;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .support-info span strong {
+      color: #e5e7eb;
+    }
+
+    .card {
+      background: #1f2937;
+      border-radius: 10px;
+      padding: 16px 20px 18px 20px;
+      max-width: 900px;
+      margin: 10px auto 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      border: 1px solid #374151;
+    }
+
+    button {
+      margin-top: 4px;
+      margin-right: 8px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #3b82f6;
+      color: white;
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    button.secondary {
+      background: #374151;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #9ca3af;
+      min-height: 16px;
+    }
+
+    #result {
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* Hints de passo a passo */
+    .step-hint {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .step-bullet {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #e5e7eb;
+      flex-shrink: 0;
+    }
+
+    .step-arrow {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* Seletor de tipo de fatura (com logo) */
+    .tipo-fatura {
+      margin-top: 10px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: #d1d5db;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: #020617;
+      border: 1px solid #1f2937;
+    }
+
+    .tipo-fatura span strong {
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+
+    .tipo-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #111827;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+    }
+
+    .tipo-option input[type="radio"] {
+      accent-color: #3b82f6;
+      cursor: pointer;
+    }
+
+    .tipo-option-content {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tipo-option-logo {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      filter: brightness(1.05);
+    }
+
+    /* Layout da área de resultado (2 blocos lado a lado) */
+    .result-layout {
+      display: flex;
+      gap: 16px;
+      align-items: stretch;
+      margin-top: 8px;
+    }
+
+    .main-output {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-output > .step-hint {
+      margin-top: 0;
+      margin-bottom: 6px;
+    }
+
+    /* Painel de sucesso */
+    .success-panel {
+      position: relative;
+      flex: 1 1 auto;
+      padding: 16px 16px 18px 16px;
+      border-radius: 12px;
+      border: 1px solid #374151;
+      background: radial-gradient(circle at top left, #1d4ed8 0%, #020617 45%, #020617 100%);
+      box-shadow: 0 8px 24px rgba(15,23,42,0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .success-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .success-badge {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle, #22c55e 0%, #15803d 45%, #052e16 100%);
+      box-shadow: 0 0 0 0 rgba(34,197,94,0.7);
+      animation: pulse 1.8s infinite;
+      font-size: 16px;
+    }
+
+    .success-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+
+    .success-sub {
+      font-size: 12px;
+      color: #cbd5f5;
+    }
+
+    .success-meta {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.7); }
+      70% { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+
+    /* ===== Botões bonitos (com espaço pra imagem) ===== */
+    .action-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      align-items:center;
+    }
+
+    .action-btn{
+      margin:0;
+      padding:10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: linear-gradient(90deg, #374151, #111827);
+      color:#e5e7eb;
+      font-weight:700;
+      font-size:13px;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.28);
+      transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+    }
+
+    .action-btn:hover{
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(0,0,0,0.34);
+    }
+
+    .action-btn:active{
+      transform: scale(0.98);
+    }
+
+    .action-btn.primary{
+      background: linear-gradient(90deg, #2563eb, #3b82f6);
+      border: 1px solid rgba(59,130,246,0.35);
+    }
+
+    .action-btn.danger{
+      background: linear-gradient(90deg, #991b1b, #ef4444);
+      border: 1px solid rgba(239,68,68,0.35);
+    }
+
+    .action-icon{
+      width:28px;
+      height:28px;
+      border-radius:10px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.10);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      flex-shrink:0;
+    }
+
+    .action-icon img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      filter: brightness(1.05);
+    }
+
+    /* ===== Botões de download com gradientes temáticos ===== */
+    .download-button {
+      margin-top: 4px;
+      margin-right: 0;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      min-width: 0;
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.28);
+      transition: transform .12s ease, filter .12s ease;
+    }
+
+    .download-icon {
+      width: 30px;
+      height: 30px;
+      object-fit: contain;
+      filter: brightness(1.05);
+    }
+
+    .download-button:hover {
+      filter: brightness(1.10);
+      transform: translateY(-1px);
+    }
+
+    .download-button:active {
+      transform: scale(0.98);
+    }
+
+    /* Excel vibe */
+    .download-excel{
+      background: linear-gradient(90deg, #0f7b3d, #22c55e);
+      border-color: rgba(34,197,94,0.40);
+    }
+
+    /* PDF vibe */
+    .download-pdf{
+      background: linear-gradient(90deg, #b91c1c, #ef4444);
+      border-color: rgba(239,68,68,0.40);
+    }
+
+    .download-tip {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    /* Caixa lateral */
+    .side-buttons {
+      flex: 0 0 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #0b0f19;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      padding: 14px;
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.4);
+    }
+
+    .side-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e5e7eb;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .side-desc {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+
+    .side-separator {
+      border: 0;
+      border-top: 1px dashed #1f2937;
+      margin: 8px 0;
+    }
+
+    /* Bloco da logo da concessionária */
+    .dist-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 10px;
+      background: #020617;
+      border: 1px dashed #1f2937;
+    }
+
+    .dist-logo-wrapper {
+      width: 90px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dist-logo {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      filter: brightness(1.05);
+    }
+
+    .dist-label {
+      font-size: 11px;
+      color: #9ca3af;
+      text-align: center;
+    }
+
+    /* Botões laterais chamativos */
+    .side-button {
+      position: relative;
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      background: linear-gradient(90deg, #2563eb, #3b82f6);
+      transition: all 0.15s ease-in-out;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+      text-align: center;
+      margin: 0;
+    }
+
+    .side-button:hover {
+      filter: brightness(1.2);
+      transform: translateY(-1px);
+    }
+
+    .side-button:active {
+      transform: scale(0.96);
+    }
+
+    /* Botão do painel com logo do Power BI */
+    .panel-button {
+      position: relative;
+      padding-right: 46px;
+      padding-left: 12px;
+      background: linear-gradient(90deg, #f2c811, #f59e0b);
+      box-shadow: 0 4px 16px rgba(242, 200, 17, 0.45);
+      color: #111827;
+    }
+
+    .panel-logo {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      pointer-events: none;
+      filter: brightness(1.05);
+    }
+
+    /* Tela de loading global */
+    #loader {
+      position: fixed;
+      inset: 0;
+      background: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 9999;
+    }
+
+    #loader-logo {
+      width: 200px;
+      max-width: 60vw;
+      margin-bottom: 12px;
+    }
+
+    .loader-text {
+      color: #e5e7eb;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .loader-bar {
+      margin-top: 12px;
+      width: 180px;
+      max-width: 70vw;
+      height: 4px;
+      border-radius: 999px;
+      background: #111827;
+      overflow: hidden;
+    }
+
+    .loader-bar-inner {
+      width: 40%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #1d4ed8, #38bdf8, #22c55e);
+      animation: load 1.2s infinite;
+    }
+
+    @keyframes load {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(250%); }
+    }
+
+    /* Loader local na área do resultado */
+    .result-loader {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      height: 160px;
+      border-radius: 6px;
+      border: 1px dashed #374151;
+      background: #020617;
+      margin-top: 8px;
+    }
+
+    .result-loader-text {
+      font-size: 13px;
+      color: #e5e7eb;
+      margin-bottom: 8px;
+    }
+
+    .result-loader-bar {
+      width: 160px;
+      max-width: 70%;
+      height: 3px;
+      border-radius: 999px;
+      background: #111827;
+      overflow: hidden;
+    }
+
+    .result-loader-bar-inner {
+      width: 45%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #3b82f6, #22c55e, #38bdf8);
+      animation: load 1s infinite;
+    }
+
+    /* ===== Multi-PDF Upload UI bonito (com espaço pra imagem do PDF) ===== */
+    .pdf-row{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      border-radius:14px;
+      border:1px dashed #475569;
+      background: linear-gradient(180deg, #0b1220, #020617);
+      margin-top:10px;
+      cursor:pointer;
+      transition: border-color .15s ease, transform .12s ease, filter .12s ease;
+    }
+
+    .pdf-row:hover{
+      border-color:#60a5fa;
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    /* input real invisível */
+    .pdf-row input[type="file"]{
+      position:absolute;
+      opacity:0;
+      pointer-events:none;
+    }
+
+    /* espaço pra imagem (logo PDF) */
+    .pdf-logo-box{
+      width:42px;
+      height:42px;
+      border-radius:12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      flex-shrink:0;
+    }
+
+    .pdf-logo-box img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      filter: brightness(1.05);
+    }
+
+    .pdf-name{
+      font-size:12px;
+      color:#cbd5f5;
+      flex:1 1 auto;
+      min-width: 120px;
+      max-width: 520px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .pdf-actions{
+      margin-left:auto;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    .pdf-actions button{
+      margin:0;
+      padding:6px 10px;
+      border-radius:999px;
+    }
+
+    .pdf-row-hint{
+      font-size:11px;
+      color:#9ca3af;
+      margin-top: 6px;
+    }
+body {
+  background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+}
+  </style>
+
+<script src="./EXTRUTURADOR DE FATURAS DE ENERGIA.min.js"></script>
+
+</head>
+
+<body>
+  <!-- Loader global -->
+  <div id="loader">
+    <img
+      id="loader-logo"
+      src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo.png"
+      alt="Logo"
+    >
+    <div class="loader-text">Carregando Extruturador de Faturas de Energia...</div>
+    <div class="loader-bar">
+      <div class="loader-bar-inner"></div>
+    </div>
+  </div>
+
+  <!-- HEADER FORA DO CARD -->
+  <div class="top-header">
+    <div class="header-logo-container">
+      <img
+        class="header-logo"
+        src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo.png"
+        alt="Logo do Setor"
+      />
+    </div>
+  </div>
+
+  <div class="card">
+    <h1>EXTRUTURADOR DE FATURAS DE ENERGIA - MOBIT</h1>
+
+    <p>Escolha a concessionária, selecione o PDF e gere o arquivo Excel.</p>
+
+    <!-- Seletor de tipo de fatura -->
+    <div class="tipo-fatura">
+      <span><strong>Tipo de fatura:</strong></span>
+
+      <label class="tipo-option">
+        <input type="radio" name="tipoFatura" value="enel" checked onclick="setTipo('enel')">
+        <span class="tipo-option-content">
+          <img
+            src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png"
+            alt="Enel"
+            class="tipo-option-logo"
+          >
+        </span>
+      </label>
+
+      <label class="tipo-option">
+        <input type="radio" name="tipoFatura" value="equatorial" onclick="setTipo('equatorial')">
+        <span class="tipo-option-content">
+          <img
+            src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/equatorial_logo.png"
+            alt="Equatorial"
+            class="tipo-option-logo"
+          >
+        </span>
+      </label>
+    </div>
+
+    <!-- Passo 1 -->
+    <div class="step-hint">
+      <div class="step-bullet">1</div>
+      <span><span class="step-arrow">➜</span> Adicione 1 ou mais PDFs da fatura.</span>
+    </div>
+
+    <!-- Lista dinâmica de PDFs -->
+    <div id="pdfList" style="margin-top:6px;"></div>
+    <div class="pdf-row-hint">Dica: clique na caixa para escolher o arquivo. Pode adicionar vários.</div>
+
+    <!-- Botões “bonitos” -->
+    <div class="action-row">
+      <button type="button" class="action-btn" onclick="addPdfRow()">
+        <span class="action-icon">+</span>
+        <span>Adicionar outro PDF</span>
+      </button>
+
+      <button type="button" class="action-btn danger" onclick="clearAllPdfs()">
+        <span class="action-icon">×</span>
+        <span>Limpar lista</span>
+      </button>
+    </div>
+
+    <div class="status" style="margin-top:8px;">
+      <span id="pdfCountInfo">0 arquivo(s) na fila.</span>
+    </div>
+
+    <!-- Passo 2 -->
+    <div class="step-hint" style="margin-top:10px;">
+      <div class="step-bullet">2</div>
+      <span><span class="step-arrow">➜</span> Clique em <strong>"Converter"</strong>.</span>
+    </div>
+
+    <button id="convertButton" class="action-btn primary" style="margin-top:8px;" onclick="handleFileChange()">
+      <span class="action-icon">
+        <img src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/PDF_TO_EXCEL.png" alt="Converter" onerror="this.parentElement.textContent='▶';" />
+      </span>
+      <span>Converter PDF para Excel estruturado</span>
+    </button>
+
+    <div id="status" class="status"></div>
+
+    <div id="result">
+      <!-- Loader local -->
+      <div id="resultLoader" class="result-loader">
+        <div class="result-loader-text">Convertendo PDF para texto...</div>
+        <div class="result-loader-bar">
+          <div class="result-loader-bar-inner"></div>
+        </div>
+      </div>
+
+      <!-- Conteúdo final -->
+       <div class="step-hint">
+              <div class="step-bullet">3</div>
+              <span>
+                <span class="step-arrow">➜</span>
+                Baixe o Excel extruturado, o PDF mesclado e Registre ao lado.
+              </span>
+            </div>
+      <div id="resultInner" style="display:none;">
+        <div class="result-layout">
+          <!-- Painel principal -->
+          <div class="main-output">
+            <div class="success-panel">
+              <div class="success-header">
+                <div class="success-badge">✓</div>
+                <div>
+                  <div class="success-title">PDF processado com sucesso</div>
+                  <div class="success-sub">
+                    <span id="pageCountSpan">0</span> página(s) detectadas •
+                    Tipo: <span id="tipoNomeSpan">Enel</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="success-meta">
+                Gere um arquivo Excel pronto para registrar no Form ao lado, com isso o arquivo será processado no Power Automate para Power BI estruturada
+                de acordo com a concessionária selecionada.
+              </div>
+
+              <!-- Excel -->
+              <button class="download-button download-excel" type="button" onclick="downloadXlsx()">
+                <img
+                  class="download-icon"
+                  src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo_excel.png"
+                  alt="Excel"
+                >
+                <span>Baixar Excel</span>
+              </button>
+
+              <!-- PDF mesclado -->
+              <button class="download-button download-pdf" type="button" onclick="downloadMergedPdf()">
+                <img
+                  class="download-icon"
+                  src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo_pdf.png"
+                  alt="PDF"
+                >
+                <span>Baixar PDF mesclado</span>
+              </button>
+
+              <div class="download-tip">Dica: junta todos os PDFs selecionados em um único arquivo.</div>
+            </div>
+          </div>
+
+          <!-- Bloco lateral -->
+          <div class="side-buttons">
+            <div class="side-title">Registrar fatura</div>
+            <div class="side-desc">
+              Após gerar o Excel ou ler os dados, use o botão abaixo para abrir o formulário da concessionária.
+            </div>
+
+            <div class="dist-block">
+              <div class="dist-logo-wrapper">
+                <img
+                  id="distLogo"
+                  class="dist-logo"
+                  src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png"
+                  alt="Logo da concessionária"
+                />
+              </div>
+              <div id="distLabel" class="dist-label">
+                Tipo selecionado: Enel
+              </div>
+            </div>
+
+            <button
+              id="registerButton"
+              type="button"
+              class="side-button"
+              onclick="openFormAtual()"
+            >
+              Registrar fatura (Enel)
+            </button>
+
+            <hr class="side-separator" />
+
+            <div class="side-title" style="font-size: 13px; margin-bottom: 4px;">
+              Painel de acompanhamento
+            </div>
+            <div class="side-desc">
+              Consulte o histórico das faturas registradas.
+            </div>
+
+            <button
+              type="button"
+              class="side-button panel-button"
+              onclick="openPainel()"
+            >
+              Abrir Painel de Acompanhamento
+              <img
+                class="panel-logo"
+                src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/power_bi.png"
+                alt="Power BI"
+              />
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+        <div class="support-info">
+      <span><strong>Suporte:</strong> Paulo Victor Lima da Silva</span>
+      <span>paulosilva@mobit.com.br</span>
+    </div>
+  </div>
+  <script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+
+  document.addEventListener('keydown', e => {
+    const k = (e.key || '').toUpperCase();
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && k === 'U') ||
+      (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(k))
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
+
+  (function(){
+    let trips = 0;
+    setInterval(() => {
+      const t0 = performance.now();
+      debugger;
+      const dt = performance.now() - t0;
+      if (dt > 120) {
+        trips++;
+        if (trips >= 2) document.documentElement.innerHTML = "";
+      } else {
+        trips = Math.max(0, trips - 1);
+      }
+    }, 700);
+  })();
+</script>
+</body>
+</html>
