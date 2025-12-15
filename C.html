@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Câmera → Base64</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:#0b0f19; color:#e5e7eb; margin:0; padding:16px;}
+    .card{max-width:720px; margin:0 auto; background:#111827; border:1px solid #1f2937; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{font-size:18px; margin:0 0 10px}
+    p{margin:0 0 12px; color:#9ca3af; font-size:13px; line-height:1.4}
+    .row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px}
+    button{cursor:pointer; border:1px solid #374151; background:#0b0f19; color:#e5e7eb; padding:10px 12px; border-radius:10px; font-weight:600}
+    button:hover{border-color:#60a5fa}
+    .preview{display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px}
+    img{max-width:100%; border-radius:12px; border:1px solid #1f2937; background:#0b0f19}
+    textarea{width:100%; min-height:180px; resize:vertical; border-radius:12px; border:1px solid #1f2937; background:#0b0f19; color:#e5e7eb; padding:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:12px}
+    .meta{display:flex; gap:12px; flex-wrap:wrap; color:#9ca3af; font-size:12px}
+    .badge{padding:4px 8px; border:1px solid #1f2937; border-radius:999px; background:#0b0f19}
+    .hint{margin-top:10px; font-size:12px; color:#9ca3af}
+    .ok{color:#86efac}
+    .err{color:#fca5a5}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📸 Câmera do celular → Base64</h1>
+    <p>
+      Toque em <b>Abrir câmera</b>, tire a foto e pronto: o Base64 aparece embaixo.
+      (No celular, isso abre o app de câmera direto.)
+    </p>
+
+    <div class="row">
+      <!-- input "camera" -->
+      <input id="cam" type="file" accept="image/*" capture="environment" style="display:none" />
+      <button id="btnOpen">Abrir câmera</button>
+      <button id="btnCopy" disabled>Copiar Base64</button>
+      <button id="btnDownload" disabled>Baixar .txt</button>
+      <button id="btnClear" disabled>Limpar</button>
+    </div>
+
+    <div class="meta">
+      <span class="badge" id="infoSize">Tamanho: —</span>
+      <span class="badge" id="infoType">Tipo: —</span>
+      <span class="badge" id="infoDim">Dimensão: —</span>
+      <span class="badge" id="infoStatus">Status: pronto</span>
+    </div>
+
+    <div class="preview">
+      <img id="img" alt="Preview da foto" style="display:none" />
+      <textarea id="out" placeholder="Aqui vai aparecer o Base64 (data:image/...;base64,...)"></textarea>
+    </div>
+
+    <div class="hint">
+      Quer só o “miolo” (sem <code>data:image/...;base64,</code>)? Dá pra cortar fácil: procura a vírgula e pega depois dela.
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const input = $("cam");
+    const btnOpen = $("btnOpen");
+    const btnCopy = $("btnCopy");
+    const btnDownload = $("btnDownload");
+    const btnClear = $("btnClear");
+
+    const img = $("img");
+    const out = $("out");
+
+    const infoSize = $("infoSize");
+    const infoType = $("infoType");
+    const infoDim  = $("infoDim");
+    const infoStatus = $("infoStatus");
+
+    function setStatus(text, ok=true){
+      infoStatus.textContent = "Status: " + text;
+      infoStatus.className = "badge " + (ok ? "ok" : "err");
+    }
+
+    function humanBytes(bytes){
+      if (!Number.isFinite(bytes)) return "—";
+      const units = ["B","KB","MB","GB"];
+      let i=0, n=bytes;
+      while (n >= 1024 && i < units.length-1){ n/=1024; i++; }
+      return `${n.toFixed(i===0?0:2)} ${units[i]}`;
+    }
+
+    btnOpen.onclick = () => input.click();
+
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+
+      setStatus("lendo imagem…");
+
+      infoSize.textContent = "Tamanho: " + humanBytes(file.size);
+      infoType.textContent = "Tipo: " + (file.type || "—");
+
+      // Ler como DataURL (já vem com data:image/...;base64,)
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result; // string
+        out.value = dataUrl;
+
+        // Preview
+        img.src = dataUrl;
+        img.style.display = "block";
+
+        // Dimensões
+        const temp = new Image();
+        temp.onload = () => {
+          infoDim.textContent = `Dimensão: ${temp.width}×${temp.height}`;
+        };
+        temp.src = dataUrl;
+
+        btnCopy.disabled = false;
+        btnDownload.disabled = false;
+        btnClear.disabled = false;
+
+        setStatus("Base64 gerado ✅", true);
+      };
+      reader.onerror = () => setStatus("falhou ao ler arquivo", false);
+      reader.readAsDataURL(file);
+    });
+
+    btnCopy.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(out.value || "");
+        setStatus("copiado pro clipboard ✅", true);
+      } catch (e) {
+        // fallback
+        out.focus();
+        out.select();
+        document.execCommand("copy");
+        setStatus("copiado (fallback) ✅", true);
+      }
+    };
+
+    btnDownload.onclick = () => {
+      const content = out.value || "";
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "imagem_base64.txt";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus("arquivo baixado ✅", true);
+    };
+
+    btnClear.onclick = () => {
+      input.value = "";
+      out.value = "";
+      img.src = "";
+      img.style.display = "none";
+      infoSize.textContent = "Tamanho: —";
+      infoType.textContent = "Tipo: —";
+      infoDim.textContent = "Dimensão: —";
+      btnCopy.disabled = true;
+      btnDownload.disabled = true;
+      btnClear.disabled = true;
+      setStatus("pronto", true);
+    };
+  </script>
+</body>
+</html>
