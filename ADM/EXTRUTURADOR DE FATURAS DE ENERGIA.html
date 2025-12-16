@@ -261,7 +261,7 @@
       100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
     }
 
-    /* ===== Botões bonitos (com espaço pra imagem) ===== */
+    /* ===== Botões bonitos ===== */
     .action-row{
       display:flex;
       gap:10px;
@@ -582,7 +582,7 @@
       animation: load 1s infinite;
     }
 
-    /* ===== Multi-PDF Upload UI bonito (com espaço pra imagem do PDF) ===== */
+    /* ===== Lista dos PDFs selecionados ===== */
     .pdf-row{
       display:flex;
       gap:12px;
@@ -592,24 +592,9 @@
       border:1px dashed #475569;
       background: linear-gradient(180deg, #0b1220, #020617);
       margin-top:10px;
-      cursor:pointer;
       transition: border-color .15s ease, transform .12s ease, filter .12s ease;
     }
 
-    .pdf-row:hover{
-      border-color:#60a5fa;
-      filter: brightness(1.05);
-      transform: translateY(-1px);
-    }
-
-    /* input real invisível */
-    .pdf-row input[type="file"]{
-      position:absolute;
-      opacity:0;
-      pointer-events:none;
-    }
-
-    /* espaço pra imagem (logo PDF) */
     .pdf-logo-box{
       width:42px;
       height:42px;
@@ -659,12 +644,651 @@
       color:#9ca3af;
       margin-top: 6px;
     }
-body {
-  background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
-}
+
+    /* teu override final */
+    body {
+      background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+    }
   </style>
 
-<script src="./EXTRUTURADOR DE FATURAS DE ENERGIA.min.js"></script>
+<script>
+  // Config pdf.js
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  // Estado global
+  let pagesTexts = [];         // texto consolidado (tudo junto)
+  let pdfBuffers = [];         // [{ name, bytes: Uint8Array }]
+  let currentTipo = "enel";
+  let selectedFiles = [];      // File[] (multi seleção)
+
+  // Config de cada tipo de fatura
+  const TIPO_CONFIG = {
+    enel: {
+      nome: "Enel",
+      logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png",
+      formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=h32KRtw5kEm37B9iNhACUjf5h_f9p5hIqNFizEk4SxdUQVAxRFlZQ0g5OVJEOEUxNEpLRENEQ0pNViQlQCN0PWcu&rebef1295d570419382cb678408ce6b56=%22Enel%22"
+    },
+    equatorial: {
+      nome: "Equatorial",
+      logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/equatorial_logo.png",
+      formUrl: "https://forms.office.com/SEU_LINK_EQUATORIAL_AQUI"
+    },
+    outro: {
+      nome: "Outro modelo",
+      logo: "",
+      formUrl: ""
+    }
+  };
+
+  // Pós-processamento de texto
+  function cleanText(text) {
+    let t = text;
+
+    if (t.normalize) {
+      t = t.normalize("NFC");
+    }
+
+    t = t.replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\u024F]/g, "");
+    t = t.replace(/(\S)\s+([ÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇáàâãéèêíìîóòôõúùûç])/g, "$1$2");
+    t = t.replace(/([ÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇáàâãéèêíìîóòôõúùûç])\s+(\S)/g, "$1$2");
+    t = t.replace(/([a-záàâãéèêíìîóòôõúùûç])([A-ZÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ])/g, "$1 $2");
+    t = t.replace(/ {2,}/g, " ");
+    return t;
+  }
+
+  // ✅ DEBUG: copiar texto convertido
+  function copyDebugText() {
+    if (!pagesTexts || pagesTexts.length === 0) {
+      alert("Nenhum texto convertido.");
+      return;
+    }
+
+    let out = "";
+    pagesTexts.forEach((txt, i) => {
+      out +=
+        "=============================\n" +
+        "PÁGINA " + (i + 1) + "\n" +
+        "=============================\n" +
+        txt + "\n\n";
+    });
+
+    navigator.clipboard.writeText(out)
+      .then(() => alert("Texto convertido copiado para o clipboard."))
+      .catch(() => alert("Falha ao copiar (permissões do navegador)."));
+  }
+
+  // ===== Seleção de PDFs (multi) =====
+  function updatePdfCountInfo() {
+    const info = document.getElementById("pdfCountInfo");
+    if (!info) return;
+    info.textContent = `${selectedFiles.length} arquivo(s) na fila.`;
+  }
+
+  function renderPdfList() {
+    const list = document.getElementById("pdfList");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    const pdfLogo = "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo_pdf.png";
+
+    if (selectedFiles.length === 0) {
+      list.innerHTML = `
+        <div class="pdf-row">
+          <div class="pdf-logo-box">
+            <img src="${pdfLogo}" alt="PDF" onerror="this.style.display='none';" />
+          </div>
+          <div class="pdf-name">Nenhum PDF selecionado</div>
+        </div>
+      `;
+      updatePdfCountInfo();
+      return;
+    }
+
+    selectedFiles.forEach((f, idx) => {
+      const row = document.createElement("div");
+      row.className = "pdf-row";
+      row.innerHTML = `
+        <div class="pdf-logo-box">
+          <img src="${pdfLogo}" alt="PDF" onerror="this.style.display='none';" />
+        </div>
+        <div class="pdf-name" title="${f.name}">${f.name}</div>
+        <div class="pdf-actions">
+          <button type="button" class="secondary" onclick="removeSelectedFile(${idx})">−</button>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+
+    updatePdfCountInfo();
+  }
+
+  function pickPdfs() {
+    const picker = document.getElementById("pdfPicker");
+    if (picker) picker.click();
+  }
+
+  function onFilesSelected(input) {
+    const files = Array.from(input.files || []);
+    if (files.length === 0) return;
+
+    for (const f of files) {
+      if (f.type !== "application/pdf") continue;
+      const exists = selectedFiles.some(x => x.name === f.name && x.size === f.size);
+      if (!exists) selectedFiles.push(f);
+    }
+
+    input.value = ""; // permite selecionar o mesmo arquivo novamente depois
+    renderPdfList();
+  }
+
+  function removeSelectedFile(idx) {
+    selectedFiles.splice(idx, 1);
+    renderPdfList();
+  }
+
+  function clearAllPdfs() {
+    selectedFiles = [];
+    pagesTexts = [];
+    pdfBuffers = [];
+    renderPdfList();
+    updatePdfCountInfo();
+
+    const status = document.getElementById("status");
+    if (status) status.textContent = "Lista limpa.";
+
+    const resultDiv = document.getElementById("result");
+    if (resultDiv) resultDiv.style.display = "none";
+  }
+
+  // ✅ Parser ENEL (TIPO 1 + TIPO 2) - SEM CNPJ/CEP/END/MUN/UF
+  function parseEnelFaturas(pages) {
+    const resultados = [];
+
+    pages.forEach((txt, idx) => {
+
+  // ==========================
+  // DETECÇÃO DE TIPO POR PÁGINA
+  // ==========================
+  const isSP = /\b(SÃO\s*PAULO|SAO\s*PAULO|Sao\s*Paulo|São\s*Paulo|\bSP\b)\b/i.test(txt);
+  const isCE = /\bCE\b/i.test(txt);
+
+  // ==========================
+  // ==========================
+  // ======== TIPO SP =========
+  // ==========================
+  // ==========================
+  if (isSP) {
+
+    // ---------- NUM_CLIENTE
+    let numCliente = "";
+    const nc = txt.match(/INSC\.?\s*EST:\s*(?:ISENTO\s*)?(\d{6,})/i);
+    if (nc) numCliente = nc[1];
+
+    // ---------- MES/ANO, VENCIMENTO, TOTAL
+    let mesAno = "";
+    let vencimento = "";
+    let total = "";
+
+    const mSP = txt.match(/R\$\s*([\d.,]+)\s+(\d{2}\/\d{2}\/\d{4}).{0,200}?\b(\d{2}\/\d{4})\b/i);
+    if (mSP) {
+      total      = mSP[1];
+      vencimento = mSP[2];
+      mesAno     = mSP[3];
+    }
+
+    if (!numCliente || !mesAno || !vencimento || !total) return;
+
+    // ---------- NF + CHAVE
+    const nfMatch = txt.match(/NOTA FISCAL Nº?\s*([\d]+)/i);
+    const notaFiscal = nfMatch ? nfMatch[1] : "";
+
+// ---------- CHAVE DE ACESSO (SP) - 2 modos
+    let chaveAcesso = "";
+
+    // (1) Modo 1: "Chave de acesso: 3525 1261 ..."
+    const chaveNum = txt.match(/chave\s+de\s+acesso:\s*([\d ]{30,})/i);
+    if (chaveNum) {
+      chaveAcesso = chaveNum[1].replace(/\s+/g, "");
+    } else {
+      // (2) Modo 2: "Nota Fiscal de Conta de Energia Eletrica 4229.EF53...."
+      const chaveHex = txt.match(/Nota\s+Fiscal\s+de\s+Conta\s+de\s+Energia\s+Eletrica\s+([0-9A-F.]{15,})/i)
+        || txt.match(/\b([0-9A-F]{4}(?:\.[0-9A-F]{4}){3,})\b/i); // fallback bem direto
+
+      if (chaveHex) {
+        // normaliza: tira pontos, deixa só HEX
+        chaveAcesso = (chaveHex[1] || "").replace(/[^0-9A-F]/gi, "").toUpperCase();
+      }
+    }
+
+    // ---------- BANDEIRA
+    let bandeiraTarifaria = "";
+    const bandMatch = txt.match(/Bandeira\(s\)\s*tarif[áa]ria\(s\).*?:\s*([A-Za-zÀ-ú ]+)/i);
+    if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
+
+    // ---------- LEITURAS / CONSUMO / DIAS (SP)
+    let dataLeituraAnterior = "";
+    let dataLeituraAtual = "";
+    let numeroDias = "";
+    let consumoKwh = "";
+
+    // Datas (anterior / atual / próxima)
+    const d3 = txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b/);
+    if (d3) {
+      dataLeituraAnterior = d3[1];
+      dataLeituraAtual    = d3[2];
+    }
+
+    // Consumo + dias pela linha do mês (NOV/25 72,000 30 CAL)
+    function mesAnoToMesAbrev(mesAno) {
+      const mm = parseInt(mesAno.slice(0,2), 10);
+      const yy = mesAno.slice(5,7);
+      const map = {1:"JAN",2:"FEV",3:"MAR",4:"ABR",5:"MAI",6:"JUN",7:"JUL",8:"AGO",9:"SET",10:"OUT",11:"NOV",12:"DEZ"};
+      return map[mm] ? `${map[mm]}/${yy}` : "";
+    }
+
+    const tagMes = mesAnoToMesAbrev(mesAno);
+    if (tagMes) {
+      const reLinhaMes = new RegExp(`\\b${tagMes.replace("/","\\/")}\\b\\s+([\\d.,]+)\\s+(\\d{1,3})\\s+CAL\\b`, "i");
+      const lm = txt.match(reLinhaMes);
+      if (lm) {
+        consumoKwh = lm[1];
+        numeroDias = lm[2];
+      }
+    }
+
+    // Fallback consumo
+    if (!consumoKwh) {
+      const enrg = txt.match(/ENRG\s*ATV[ÚU]NICO\s+([\d.,]+)/i);
+      if (enrg) consumoKwh = enrg[1];
+    }
+
+    resultados.push({
+      pagina: idx + 1,
+      numCliente,
+      mesAno,
+      vencimento,
+      total,
+      bandeiraTarifaria,
+      dataLeituraAnterior,
+      dataLeituraAtual,
+      numeroDias,
+      consumoKwh,
+      chaveAcesso,
+      notaFiscal,
+      textoBruto: txt
+    });
+
+    return;
+  }
+
+  // ==========================
+  // ==========================
+  // ======== TIPO CE =========
+  // ==========================
+  // ==========================
+  if (isCE) {
+
+    const main = txt.match(
+      /INSC\. EST:\s*\d+\s+(\d+)\s+(\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+R\$ ?([\d.,]+)/i
+    );
+    if (!main) return;
+
+    const numCliente = main[1];
+    const mesAno     = main[2];
+    const vencimento = main[3];
+    const total      = main[4];
+
+    const nfMatch = txt.match(/NOTA FISCAL Nº?\s*([\d]+)/i);
+    const notaFiscal = nfMatch ? nfMatch[1] : "";
+
+    const chaveMatch = txt.match(/chave de acesso:\s*([\d ]{30,})/i);
+    let chaveAcesso = "";
+    if (chaveMatch) chaveAcesso = chaveMatch[1].replace(/\s+/g, "");
+
+    let bandeiraTarifaria = "";
+    const bandMatch = txt.match(/Band\.\s*Tarif\.\s*:\s*([A-Za-zÀ-ú]+)/i);
+    if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
+
+    let dataLeituraAnterior = "";
+    let dataLeituraAtual = "";
+    let numeroDias = "";
+    let consumoKwh = "";
+
+    const leituraMatch = txt.match(
+      /(\d{2}\/\d{2}\/\d{4})\s+\d+\.\d+\s+(\d{2}\/\d{2}\/\d{4})\s+\d+\.\d+\s+\d+\.\d+\s+(\d+\.\d+)\s+(\d+)/i
+    );
+
+    if (leituraMatch) {
+      dataLeituraAnterior = leituraMatch[1];
+      dataLeituraAtual    = leituraMatch[2];
+      consumoKwh          = leituraMatch[3];
+      numeroDias          = leituraMatch[4];
+    }
+
+    resultados.push({
+      pagina: idx + 1,
+      numCliente,
+      mesAno,
+      vencimento,
+      total,
+      bandeiraTarifaria,
+      dataLeituraAnterior,
+      dataLeituraAtual,
+      numeroDias,
+      consumoKwh,
+      chaveAcesso,
+      notaFiscal,
+      textoBruto: txt
+    });
+
+    return;
+  }
+
+});
+
+    return resultados;
+  }
+
+  function hideGlobalLoader() {
+    const loader = document.getElementById("loader");
+    if (loader) loader.style.display = "none";
+  }
+
+  window.addEventListener("load", () => {
+    setTimeout(hideGlobalLoader, 5000);
+    updateTipoUI();
+    renderPdfList();
+  });
+
+  function setTipo(tipo) {
+    currentTipo = tipo;
+    updateTipoUI();
+  }
+
+  function updateTipoUI() {
+    const cfg = TIPO_CONFIG[currentTipo];
+    const distLogo = document.getElementById("distLogo");
+    const distLabel = document.getElementById("distLabel");
+    const registerBtn = document.getElementById("registerButton");
+    const tipoNomeSpan = document.getElementById("tipoNomeSpan");
+
+    if (cfg.logo) {
+      distLogo.src = cfg.logo;
+      distLogo.style.opacity = "1";
+    } else {
+      distLogo.src = "";
+      distLogo.style.opacity = "0.2";
+    }
+
+    distLabel.textContent = cfg.nome
+      ? `Tipo selecionado: ${cfg.nome}`
+      : "Selecione o tipo de fatura acima.";
+
+    if (tipoNomeSpan) tipoNomeSpan.textContent = cfg.nome || "—";
+
+    if (cfg.formUrl) {
+      registerBtn.disabled = false;
+      registerBtn.textContent = `Registrar fatura (${cfg.nome})`;
+    } else {
+      registerBtn.disabled = true;
+      registerBtn.textContent = "Registrar fatura (tipo sem formulário)";
+    }
+  }
+
+  async function handleFileChange() {
+    const status        = document.getElementById("status");
+    const button        = document.getElementById("convertButton");
+    const resultDiv     = document.getElementById("result");
+    const resultLoader  = document.getElementById("resultLoader");
+    const resultInner   = document.getElementById("resultInner");
+    const pageCountSpan = document.getElementById("pageCountSpan");
+
+    const files = selectedFiles.slice();
+
+    if (files.length === 0) {
+      alert("Adicione pelo menos 1 PDF.");
+      return;
+    }
+
+    for (const f of files) {
+      if (f.type !== "application/pdf") {
+        alert(`O arquivo "${f.name}" não é PDF.`);
+        return;
+      }
+    }
+
+    pagesTexts = [];
+    pdfBuffers = [];
+
+    resultDiv.style.display = "block";
+    resultLoader.style.display = "flex";
+    resultInner.style.display  = "none";
+    status.textContent = `Lendo ${files.length} PDF(s), aguarde...`;
+    button.disabled = true;
+
+    try {
+      let totalPages = 0;
+
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        status.textContent = `Lendo PDF ${i + 1}/${files.length}: ${f.name}`;
+
+        const ab = await f.arrayBuffer();
+        const bytes = new Uint8Array(ab.slice(0));
+        pdfBuffers.push({ name: f.name, bytes });
+
+        const loadingTask = pdfjsLib.getDocument({ data: ab });
+        const pdf = await loadingTask.promise;
+
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const content = await page.getTextContent();
+          const strings = content.items.map(item => item.str);
+          const rawPageText = strings.join(" ");
+          const pageText = cleanText(rawPageText).trim();
+
+          pagesTexts.push(pageText);
+          totalPages++;
+        }
+      }
+
+      if (pageCountSpan) pageCountSpan.textContent = totalPages;
+
+      status.textContent = `Pronto! ${files.length} PDF(s) lido(s), ${totalPages} página(s) no total.`;
+      resultLoader.style.display = "none";
+      resultInner.style.display  = "block";
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Erro ao ler os PDFs. Veja o console para detalhes.";
+      alert("Deu erro ao ler os PDFs.");
+      resultLoader.style.display = "none";
+      resultInner.style.display  = "none";
+      resultDiv.style.display    = "none";
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  // Gera XLSX conforme o tipo atual
+  async function downloadXlsx() {
+    const status = document.getElementById("status");
+
+    if (!pagesTexts || pagesTexts.length === 0) {
+      alert("Nenhum texto de página encontrado. Converta o PDF primeiro.");
+      return;
+    }
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet("FATURAS");
+
+      if (currentTipo === "enel") {
+        const faturas = parseEnelFaturas(pagesTexts);
+
+        if (faturas.length === 0) {
+          alert("Nenhuma fatura ENEL padrão encontrada no texto.");
+          return;
+        }
+
+        // ✅ SEM CNPJ/CEP/END/MUN/UF
+        const rows = faturas.map(f => [
+          f.pagina,
+          f.numCliente,
+          f.mesAno,
+          f.vencimento,
+          f.total,
+          f.bandeiraTarifaria,
+          f.dataLeituraAnterior,
+          f.dataLeituraAtual,
+          f.numeroDias,
+          f.consumoKwh,
+          f.chaveAcesso,
+          f.notaFiscal,
+          f.textoBruto
+        ]);
+
+        sheet.addTable({
+          name: "FATURAS",
+          ref: "A1",
+          headerRow: true,
+          totalsRow: false,
+          style: {
+            theme: "TableStyleMedium2",
+            showRowStripes: true
+          },
+          columns: [
+            { name: "PAGINA",             filterButton: true },
+            { name: "NUM_CLIENTE",        filterButton: true },
+            { name: "MES_ANO",            filterButton: true },
+            { name: "VENCIMENTO",         filterButton: true },
+            { name: "TOTAL",              filterButton: true },
+            { name: "BANDEIRA_TARIFARIA", filterButton: true },
+            { name: "DT_LEIT_ANTERIOR",   filterButton: true },
+            { name: "DT_LEIT_ATUAL",      filterButton: true },
+            { name: "NUM_DIAS",           filterButton: true },
+            { name: "CONSUMO_KWH",        filterButton: true },
+            { name: "CHAVE_ACESSO",       filterButton: true },
+            { name: "NOTA_FISCAL",        filterButton: true },
+            { name: "TEXTO_BRUTO",        filterButton: false }
+          ],
+          rows: rows
+        });
+
+        sheet.getColumn(1).width  = 8;
+        sheet.getColumn(2).width  = 14;
+        sheet.getColumn(3).width  = 10;
+        sheet.getColumn(4).width  = 12;
+        sheet.getColumn(5).width  = 12;
+        sheet.getColumn(6).width  = 22;
+        sheet.getColumn(7).width  = 14;
+        sheet.getColumn(8).width  = 14;
+        sheet.getColumn(9).width  = 10;
+        sheet.getColumn(10).width = 14;
+        sheet.getColumn(11).width = 36;
+        sheet.getColumn(12).width = 14;
+        sheet.getColumn(13).width = 120;
+
+      } else {
+        const rows = pagesTexts.map((txt, idx) => [idx + 1, txt]);
+
+        sheet.addTable({
+          name: "FATURAS",
+          ref: "A1",
+          headerRow: true,
+          totalsRow: false,
+          style: {
+            theme: "TableStyleMedium9",
+            showRowStripes: true
+          },
+          columns: [
+            { name: "PAGINA",      filterButton: true },
+            { name: "TEXTO_BRUTO", filterButton: false }
+          ],
+          rows: rows
+        });
+
+        sheet.getColumn(1).width = 8;
+        sheet.getColumn(2).width = 120;
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob(
+        [buffer],
+        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+      );
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = currentTipo === "enel" ? "FATURAS_ENEL.xlsx" : "FATURAS.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      status.textContent = "Arquivo Excel gerado com sucesso.";
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao gerar o arquivo Excel.");
+      status.textContent = "Erro ao gerar o arquivo Excel.";
+    }
+  }
+
+  async function downloadMergedPdf() {
+    const status = document.getElementById("status");
+
+    if (!pdfBuffers || pdfBuffers.length === 0) {
+      alert("Nenhum PDF em memória. Primeiro clique em Converter.");
+      return;
+    }
+
+    try {
+      status.textContent = `Mesclando ${pdfBuffers.length} PDF(s)...`;
+
+      const mergedPdf = await PDFLib.PDFDocument.create();
+
+      for (let i = 0; i < pdfBuffers.length; i++) {
+        const donor = await PDFLib.PDFDocument.load(pdfBuffers[i].bytes);
+        const copiedPages = await mergedPdf.copyPages(donor, donor.getPageIndices());
+        copiedPages.forEach(p => mergedPdf.addPage(p));
+      }
+
+      const mergedBytes = await mergedPdf.save();
+      const blob = new Blob([mergedBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `FATURAS_MESCLADO_${currentTipo.toUpperCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      status.textContent = "PDF mesclado gerado com sucesso.";
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao mesclar os PDFs.");
+      status.textContent = "Erro ao mesclar os PDFs.";
+    }
+  }
+
+  function openFormAtual() {
+    const cfg = TIPO_CONFIG[currentTipo];
+    if (!cfg.formUrl) {
+      alert("Formulário não configurado para este tipo de fatura.");
+      return;
+    }
+    window.open(cfg.formUrl, "_blank");
+  }
+
+  function openPainel() {
+    const url = "https://bimobit.github.io/BI/ADM/PROCESSAMENTO%20DE%20FATURAS%20DE%20ENERGIA.html";
+    window.open(url, "_blank");
+  }
+</script>
 
 </head>
 
@@ -696,7 +1320,7 @@ body {
   <div class="card">
     <h1>EXTRUTURADOR DE FATURAS DE ENERGIA - MOBIT</h1>
 
-    <p>Escolha a concessionária, selecione o PDF e gere o arquivo Excel.</p>
+    <p>Escolha a concessionária, selecione os PDFs e gere o arquivo Excel.</p>
 
     <!-- Seletor de tipo de fatura -->
     <div class="tipo-fatura">
@@ -728,18 +1352,21 @@ body {
     <!-- Passo 1 -->
     <div class="step-hint">
       <div class="step-bullet">1</div>
-      <span><span class="step-arrow">➜</span> Adicione 1 ou mais PDFs da fatura.</span>
+      <span><span class="step-arrow">➜</span> Selecione 1 ou mais PDFs da fatura (de uma vez).</span>
     </div>
 
-    <!-- Lista dinâmica de PDFs -->
-    <div id="pdfList" style="margin-top:6px;"></div>
-    <div class="pdf-row-hint">Dica: clique na caixa para escolher o arquivo. Pode adicionar vários.</div>
+    <!-- input multi (invisível) -->
+    <input id="pdfPicker" type="file" accept="application/pdf" multiple style="display:none" onchange="onFilesSelected(this)" />
 
-    <!-- Botões “bonitos” -->
+    <!-- Lista de PDFs -->
+    <div id="pdfList" style="margin-top:6px;"></div>
+    <div class="pdf-row-hint">Dica: clique em “Selecionar PDFs” e escolha vários de uma vez.</div>
+
+    <!-- Botões -->
     <div class="action-row">
-      <button type="button" class="action-btn" onclick="addPdfRow()">
+      <button type="button" class="action-btn" onclick="pickPdfs()">
         <span class="action-icon">+</span>
-        <span>Adicionar outro PDF</span>
+        <span>Selecionar PDFs</span>
       </button>
 
       <button type="button" class="action-btn danger" onclick="clearAllPdfs()">
@@ -777,13 +1404,14 @@ body {
       </div>
 
       <!-- Conteúdo final -->
-       <div class="step-hint">
-              <div class="step-bullet">3</div>
-              <span>
-                <span class="step-arrow">➜</span>
-                Baixe o Excel extruturado, o PDF mesclado e Registre ao lado.
-              </span>
-            </div>
+      <div class="step-hint">
+        <div class="step-bullet">3</div>
+        <span>
+          <span class="step-arrow">➜</span>
+          Baixe o Excel estruturado, o PDF mesclado e Registre ao lado.
+        </span>
+      </div>
+
       <div id="resultInner" style="display:none;">
         <div class="result-layout">
           <!-- Painel principal -->
@@ -801,7 +1429,7 @@ body {
               </div>
 
               <div class="success-meta">
-                Gere um arquivo Excel pronto para registrar no Form ao lado, com isso o arquivo será processado no Power Automate para Power BI estruturada
+                Gere um arquivo Excel pronto para registrar no Form ao lado. O arquivo será processado no Power Automate para Power BI estruturada
                 de acordo com a concessionária selecionada.
               </div>
 
@@ -812,7 +1440,7 @@ body {
                   src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo_excel.png"
                   alt="Excel"
                 >
-                <span>Baixar Excel</span>
+                <span>Baixar Excel Estruturado</span>
               </button>
 
               <!-- PDF mesclado -->
@@ -825,7 +1453,17 @@ body {
                 <span>Baixar PDF mesclado</span>
               </button>
 
-              <div class="download-tip">Dica: junta todos os PDFs selecionados em um único arquivo.</div>
+              <!-- DEBUG -->
+              <!---->
+              <button
+                class="download-button"
+                type="button"
+                style="background: linear-gradient(90deg, #374151, #111827); border-color: rgba(148,163,184,0.25);"
+                onclick="copyDebugText()"
+              >
+                <span>Copiar texto convertido (DEBUG)</span>
+              </button>
+              
             </div>
           </div>
 
@@ -885,41 +1523,43 @@ body {
         </div>
       </div>
     </div>
-        <div class="support-info">
+
+    <div class="support-info">
       <span><strong>Suporte:</strong> Paulo Victor Lima da Silva</span>
       <span>paulosilva@mobit.com.br</span>
     </div>
   </div>
+
   <script>
-  document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('contextmenu', e => e.preventDefault());
 
-  document.addEventListener('keydown', e => {
-    const k = (e.key || '').toUpperCase();
-    if (
-      e.key === 'F12' ||
-      (e.ctrlKey && k === 'U') ||
-      (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(k))
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-  }, true);
-
-  (function(){
-    let trips = 0;
-    setInterval(() => {
-      const t0 = performance.now();
-      debugger;
-      const dt = performance.now() - t0;
-      if (dt > 120) {
-        trips++;
-        if (trips >= 2) document.documentElement.innerHTML = "";
-      } else {
-        trips = Math.max(0, trips - 1);
+    document.addEventListener('keydown', e => {
+      const k = (e.key || '').toUpperCase();
+      if (
+        e.key === 'F12' ||
+        (e.ctrlKey && k === 'U') ||
+        (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(k))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
       }
-    }, 700);
-  })();
-</script>
+    }, true);
+
+    (function(){
+      let trips = 0;
+      setInterval(() => {
+        const t0 = performance.now();
+        debugger;
+        const dt = performance.now() - t0;
+        if (dt > 120) {
+          trips++;
+          if (trips >= 2) document.documentElement.innerHTML = "";
+        } else {
+          trips = Math.max(0, trips - 1);
+        }
+      }, 700);
+    })();
+  </script>
 </body>
 </html>
