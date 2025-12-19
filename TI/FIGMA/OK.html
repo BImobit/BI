@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Success Badge</title>
+
+<style>
+  :root{
+    --ok:#22C55E;        /* verde */
+    --ok2:#16A34A;       /* verde mais escuro */
+    --bg: rgba(34,197,94,.14);
+    --duration: 1800ms;  /* duração total */
+    --size: 72px;        /* tamanho do badge */
+    --stroke: 10;        /* grossura traço */
+  }
+
+  html, body{
+    margin:0; width:100%; height:100%;
+    background:transparent; overflow:hidden;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+
+  .stage{
+    width:100%; height:100%;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .badge{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%,-50%) scale(.92);
+    width: var(--size);
+    height: var(--size);
+    opacity:0;
+    pointer-events:none;
+    filter:none;
+    animation: pop var(--duration) cubic-bezier(.2,.85,.25,1) forwards;
+  }
+
+  /* pop + sumir */
+  @keyframes pop{
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(.85); }
+    18%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    62%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100% { opacity:0; transform:translate(-50%,-50%) scale(.98); }
+  }
+
+  /* círculo “desenhando” */
+  .ring{
+    fill: var(--bg);
+    stroke: url(#grad);
+    stroke-width: var(--stroke);
+    stroke-linecap: round;
+    stroke-dasharray: 300;
+    stroke-dashoffset: 300;
+    animation: draw 700ms ease-out forwards;
+  }
+
+  @keyframes draw{
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* check “desenhando” */
+  .check{
+    fill: none;
+    stroke: #ffffff;
+    stroke-width: calc(var(--stroke) * 0.75);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 90;
+    stroke-dashoffset: 90;
+    animation: tick 520ms ease-out forwards;
+    animation-delay: 180ms;
+  }
+
+  @keyframes tick{
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* leve brilho (controlado, sem “avacalhar”) */
+  .shadow{
+    filter: drop-shadow(0 10px 22px rgba(0,0,0,.18));
+  }
+
+  .label{
+    position:absolute;
+    left:50%;
+    top: calc(50% + (var(--size) / 2) + 10px);
+    transform: translateX(-50%);
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(20,30,40,.75);
+    opacity:0;
+    animation: labelIn var(--duration) ease-out forwards;
+    pointer-events:none;
+    white-space: nowrap;
+  }
+
+  @keyframes labelIn{
+    0%, 22% { opacity:0; transform:translateX(-50%) translateY(6px); }
+    35%     { opacity:1; transform:translateX(-50%) translateY(0); }
+    70%     { opacity:1; }
+    100%    { opacity:0; }
+  }
+</style>
+</head>
+
+<body>
+  <div class="stage">
+    <svg class="badge shadow" id="badge" viewBox="0 0 120 120" aria-label="Acesso liberado">
+      <defs>
+        <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="var(--ok)"/>
+          <stop offset="100%" stop-color="var(--ok2)"/>
+        </linearGradient>
+      </defs>
+
+      <!-- círculo -->
+      <circle class="ring" cx="60" cy="60" r="46"></circle>
+
+      <!-- check -->
+      <path class="check" d="M38 62 L54 78 L84 46"></path>
+    </svg>
+  </div>
+
+<script>
+  // Params:
+  // ?top=50&left=50&right=&bottom=&delay=0&duration=1800&size=72&stroke=10&ok=22C55E&ok2=16A34A&text=Credencial%20OK&showText=1
+  const p = new URLSearchParams(location.search);
+
+  const badge = document.getElementById('badge');
+  const label = document.getElementById('label');
+
+  const top = p.get('top');
+  const left = p.get('left');
+  const right = p.get('right');
+  const bottom = p.get('bottom');
+
+  const delay = parseInt(p.get('delay') || '0', 10);
+  const duration = parseInt(p.get('duration') || '1800', 10);
+  const size = parseInt(p.get('size') || '72', 10);
+  const stroke = parseInt(p.get('stroke') || '10', 10);
+
+  const ok = p.get('ok');
+  const ok2 = p.get('ok2');
+  const text = p.get('text');
+  const showText = p.get('showText');
+
+  // position
+  const style = badge.style;
+  style.position = 'absolute';
+
+  // default center
+  style.top = (top ? top + '%' : '50%');
+  style.left = (left ? left + '%' : '50%');
+  style.transform = 'translate(-50%,-50%) scale(.92)';
+
+  if (right !== null) {
+    style.left = 'auto';
+    style.right = Number(right) + '%';
+    style.transform = 'translate(0,-50%) scale(.92)';
+  }
+  if (bottom !== null) {
+    style.top = 'auto';
+    style.bottom = Number(bottom) + '%';
+    if (right !== null) style.transform = 'translate(0,0) scale(.92)';
+    else style.transform = 'translate(-50%,0) scale(.92)';
+  }
+
+  // apply vars
+  document.documentElement.style.setProperty('--duration', duration + 'ms');
+  document.documentElement.style.setProperty('--size', size + 'px');
+  document.documentElement.style.setProperty('--stroke', stroke);
+
+  if (ok) document.documentElement.style.setProperty('--ok', '#' + ok.replace('#',''));
+  if (ok2) document.documentElement.style.setProperty('--ok2', '#' + ok2.replace('#',''));
+
+  // delay badge + label
+  badge.style.animationDelay = delay + 'ms';
+  // ring/check also delayed with CSS by being inside; easiest: delay whole svg
+  badge.style.opacity = '0';
+
+  // label
+  if (text) label.textContent = decodeURIComponent(text);
+  if (showText !== '1') label.style.display = 'none';
+
+  label.style.top = 'calc(50% + (' + size + 'px / 2) + 10px)';
+  label.style.animationDelay = delay + 'ms';
+</script>
+</body>
+</html>
