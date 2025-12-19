@@ -23,37 +23,44 @@
   }
 
   /* =========================
-     BASE – ocupa 100% REAL
+     VIEWPORT REAL (CHAVE!)
   ========================== */
   html, body{
-    margin:0;
-    padding:0;
-    width:100%;
-    height:100%;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    min-width: 100vw;
+    min-height: 100vh;
     background: transparent;
-    overflow:hidden;
+    overflow: hidden;
   }
 
   /* =========================
-     CONTAINER FULL-BLEED
+     CONTAINER FULLSCREEN
   ========================== */
   .wrap{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    display:block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    display: block;
     border-radius: var(--radius);
-    overflow:hidden;
+    overflow: hidden;
 
     transform: translateZ(0);
     will-change: transform, filter;
   }
 
   .wrap img{
-    display:block;
-    width:100%;
-    height:100%;
+    display: block;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     filter: saturate(1.03) contrast(1.03);
   }
@@ -115,12 +122,12 @@
       0 0 calc(34px * var(--k)) rgba(var(--r),var(--g),var(--b), calc(0.22 * var(--k))),
       inset 0 0 calc(26px * var(--k)) rgba(var(--r),var(--g),var(--b), calc(0.60 * var(--k)));
 
-    opacity:0;
+    opacity: 0;
     animation: flash2 var(--flashDur) ease-in-out 1;
   }
 
   /* =========================
-     CAMADA DE POLIMENTO
+     POLIMENTO VISUAL
   ========================== */
   .wrap::before{
     content:'';
@@ -140,25 +147,27 @@
         rgba(0,0,0,0) 55%,
         rgba(0,0,0,0.18) 100%);
 
-    opacity:0;
+    opacity: 0;
     animation: flash2 var(--flashDur) ease-in-out 1;
     mix-blend-mode: screen;
   }
 
   /* =========================
-     GRÃO SUTIL (TEXTURA)
+     TEXTURA (GRÃO SUTIL)
   ========================== */
   .grain{
     position:absolute;
     inset:-30%;
     pointer-events:none;
-    opacity:0.07;
+    opacity: 0.07;
     background-image:
-      repeating-linear-gradient(0deg,
+      repeating-linear-gradient(
+        0deg,
         rgba(255,255,255,0.06),
         rgba(255,255,255,0.06) 1px,
         rgba(0,0,0,0) 2px,
-        rgba(0,0,0,0) 4px);
+        rgba(0,0,0,0) 4px
+      );
     transform: rotate(2deg);
     mix-blend-mode: overlay;
   }
