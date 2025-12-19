@@ -14,37 +14,38 @@
     /* Cor base do erro */
     --r: 237; --g: 0; --b: 0;
 
-    /* Intensidade geral (0.6 a 1.4) */
+    /* Intensidade geral */
     --k: 1;
 
-    /* Tempo do ciclo da piscada dupla */
-    --flashDur: 1.90s;
-
-    /* Tempo do shake */
+    /* Tempos */
+    --flashDur: 1.9s;
     --shakeDur: 1.35s;
   }
 
+  /* =========================
+     BASE – ocupa 100% REAL
+  ========================== */
   html, body{
-    margin:0; padding:0;
-    width:100%; height:100%;
-    background: transparent;
-    overflow:hidden;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-  }
-
-  .wrap{
-    position:relative;
-    display:inline-block;
+    margin:0;
+    padding:0;
     width:100%;
     height:100%;
-    max-width:100%;
-    max-height:100%;
+    background: transparent;
+    overflow:hidden;
+  }
+
+  /* =========================
+     CONTAINER FULL-BLEED
+  ========================== */
+  .wrap{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    display:block;
     border-radius: var(--radius);
     overflow:hidden;
 
-    /* dá estabilidade de render em alguns browsers */
     transform: translateZ(0);
     will-change: transform, filter;
   }
@@ -54,15 +55,11 @@
     width:100%;
     height:100%;
     object-fit: contain;
-
-    /* “polimento” sutil */
     filter: saturate(1.03) contrast(1.03);
   }
 
   /* =========================
-     1) SHAKE LATERAL (mesma lógica)
-     - melhorado: timing mais “impacto”
-     - micro blur durante o tremor (fica MUITO mais real)
+     SHAKE LATERAL (TUA LÓGICA)
   ========================== */
   @keyframes shakeLR {
     0%   { transform: translateX(0); filter: blur(0px); }
@@ -84,36 +81,25 @@
   }
 
   /* =========================
-     2) DUAS “PISCADAS” (mesma lógica)
-     - melhorado: não é ON/OFF duro
-     - tem “pico” e “cauda” suave
-     - dá sensação de impacto, tipo alerta moderno
+     DUAS PISCADAS (TUA LÓGICA)
   ========================== */
   @keyframes flash2 {
-    /* começo limpo */
     0%, 12% { opacity: 0; }
 
-    /* 1º impacto */
     20% { opacity: calc(0.95 * var(--k)); }
     30% { opacity: calc(0.10 * var(--k)); }
 
-    /* respiro curtinho */
     40% { opacity: 0; }
 
-    /* 2º impacto (um pouco mais “forte”) */
     52% { opacity: calc(1.00 * var(--k)); }
     62% { opacity: calc(0.14 * var(--k)); }
 
-    /* volta */
     74%, 100% { opacity: 0; }
   }
 
   /* =========================
-     OVERLAY: borda + brilho + véu
-     - multi-camadas: parece “neon” e volumétrico
-     - mantém exatamente tua ideia de sombra vermelha
+     OVERLAY VERMELHO (SOMBRA)
   ========================== */
-
   .wrap::after{
     content:'';
     position:absolute;
@@ -121,13 +107,9 @@
     border-radius: var(--radius);
     pointer-events:none;
 
-    /* borda sólida (tua original) */
     border: var(--border) solid rgb(var(--r),var(--g),var(--b));
-
-    /* véu vermelho */
     background: rgba(var(--r),var(--g),var(--b), calc(0.10 * var(--k)));
 
-    /* glow com 3 níveis (o “capricho”) */
     box-shadow:
       0 0 calc(14px * var(--k)) rgba(var(--r),var(--g),var(--b), calc(0.55 * var(--k))),
       0 0 calc(34px * var(--k)) rgba(var(--r),var(--g),var(--b), calc(0.22 * var(--k))),
@@ -137,7 +119,9 @@
     animation: flash2 var(--flashDur) ease-in-out 1;
   }
 
-  /* Camada extra: “borda viva” com gradiente sutil */
+  /* =========================
+     CAMADA DE POLIMENTO
+  ========================== */
   .wrap::before{
     content:'';
     position:absolute;
@@ -145,7 +129,6 @@
     border-radius: var(--radius);
     pointer-events:none;
 
-    /* um highlight bem leve, dá cara premium */
     background:
       radial-gradient(circle at 20% 10%,
         rgba(255,255,255, calc(0.12 * var(--k))) 0%,
@@ -157,17 +140,19 @@
         rgba(0,0,0,0) 55%,
         rgba(0,0,0,0.18) 100%);
 
-    opacity: 0;
+    opacity:0;
     animation: flash2 var(--flashDur) ease-in-out 1;
-    mix-blend-mode: screen; /* deixa o brilho mais bonito */
+    mix-blend-mode: screen;
   }
 
-  /* Opcional: “grão” ultra sutil pra dar textura (bem leve) */
+  /* =========================
+     GRÃO SUTIL (TEXTURA)
+  ========================== */
   .grain{
     position:absolute;
     inset:-30%;
     pointer-events:none;
-    opacity: 0.07;
+    opacity:0.07;
     background-image:
       repeating-linear-gradient(0deg,
         rgba(255,255,255,0.06),
@@ -177,11 +162,11 @@
     transform: rotate(2deg);
     mix-blend-mode: overlay;
   }
-
 </style>
 </head>
 
 <body>
+
   <div id="wrap" class="wrap shake">
     <img id="img" alt="Erro de Login" />
     <div class="grain"></div>
@@ -191,24 +176,18 @@
 (function(){
   const p = new URLSearchParams(location.search);
 
-  // Permite passar img como URL completa ou só o arquivo
   const img = p.get('img') || 'ERROR%20DE%20LOGIN.png';
-
-  // Intensidade (0.6 a 1.4 fica bom)
   const k = Math.max(0.5, Math.min(1.6, parseFloat(p.get('intensity') || '1')));
-
-  // Velocidades opcionais
   const flashDur = p.get('flash') || '1.9s';
   const shakeDur = p.get('shake') || '1.35s';
 
-  // Cor opcional (hex sem #, ex: ED0000)
   const hex = (p.get('color') || 'ED0000').replace('#','').trim();
   const r = parseInt(hex.substring(0,2),16) || 237;
   const g = parseInt(hex.substring(2,4),16) || 0;
   const b = parseInt(hex.substring(4,6),16) || 0;
 
   const root = document.documentElement;
-  root.style.setProperty('--k', String(k));
+  root.style.setProperty('--k', k);
   root.style.setProperty('--flashDur', flashDur);
   root.style.setProperty('--shakeDur', shakeDur);
   root.style.setProperty('--r', r);
@@ -216,10 +195,10 @@
   root.style.setProperty('--b', b);
 
   const rawBase = 'https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/FIGMA/';
-  const src = img.startsWith('http') ? img : (rawBase + img);
-
-  document.getElementById('img').src = src;
+  document.getElementById('img').src =
+    img.startsWith('http') ? img : (rawBase + img);
 })();
 </script>
+
 </body>
 </html>
