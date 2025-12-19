@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chevron Hint Pro</title>
+
+<style>
+  :root{
+    --c1:#FFD24A;
+    --c2:#FDB913;
+    --c3:#FF9F0A;
+    --duration: 3000ms;
+  }
+
+  html, body{
+    margin:0;
+    width:100%;
+    height:100%;
+    background:transparent;
+    overflow:hidden;
+  }
+
+  .stage{
+    width:100%;
+    height:100%;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .hint{
+    position:absolute;
+    right:6%;
+    top:50%;
+    transform: translateY(-50%);
+    display:flex;
+    gap: 8%;                 /* ↓ menos espaço entre eles */
+    align-items:center;
+
+    width: 36%;
+    height: 48%;             /* ↑ mais alto */
+    max-width: 260px;
+    max-height: 110px;
+    min-width: 120px;
+    min-height: 54px;
+  }
+
+  /* CHEVRON MAIS GROSSO */
+  .chev{
+    width: 32%;              /* ↑ mais largo */
+    height: 86%;             /* ↑ mais alto */
+    opacity: 0;
+    transform: translateX(-10%);
+    border-radius: 14px;     /* ↑ borda mais “pesada” */
+
+    background: linear-gradient(135deg, var(--c1), var(--c2) 55%, var(--c3));
+
+    box-shadow:
+      0 12px 26px rgba(0,0,0,0.12),
+      0 0 14px rgba(253,185,19,0.18);
+
+    clip-path: polygon(
+      0% 0%,
+      72% 50%,   /* ponta mais “cheia” */
+      0% 100%,
+      36% 100%,  /* ↑ engrossa a perna */
+      100% 50%,
+      36% 0%
+    );
+
+    will-change: transform, opacity;
+  }
+
+  /* brilho interno mais largo */
+  .chev::before{
+    content:'';
+    position:absolute;
+    inset: 12% 10%;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.38), rgba(255,255,255,0));
+    opacity: 0.65;
+    clip-path: inherit;
+  }
+
+  @keyframes stepPro{
+    0%   { opacity:0; transform: translateX(-14%); }
+    18%  { opacity:1; transform: translateX(0%); }
+    60%  { opacity:1; transform: translateX(12%); }
+    82%  { opacity:1; transform: translateX(12%); }
+    100% { opacity:0; transform: translateX(12%); }
+  }
+
+  .c1{ animation: stepPro var(--duration) cubic-bezier(.2,.85,.25,1) forwards; }
+  .c2{ animation: stepPro var(--duration) cubic-bezier(.2,.85,.25,1) forwards; animation-delay: 200ms; }
+  .c3{ animation: stepPro var(--duration) cubic-bezier(.2,.85,.25,1) forwards; animation-delay: 400ms; }
+
+</style>
+</head>
+
+<body>
+  <div class="stage">
+    <div class="hint" id="hint">
+      <div class="chev c1"></div>
+      <div class="chev c2"></div>
+      <div class="chev c3"></div>
+    </div>
+  </div>
+
+<script>
+  // ?top=32&delay=0&duration=3000&c1=FFD24A&c2=FDB913&c3=FF9F0A
+  const p = new URLSearchParams(location.search);
+
+  const hint = document.getElementById('hint');
+  const top = p.get('top');
+  const delay = parseInt(p.get('delay') || '0', 10);
+  const duration = parseInt(p.get('duration') || '3000', 10);
+
+  const c1 = p.get('c1');
+  const c2 = p.get('c2');
+  const c3 = p.get('c3');
+
+  if (top) hint.style.top = top + '%';
+  document.documentElement.style.setProperty('--duration', duration + 'ms');
+
+  if (c1) document.documentElement.style.setProperty('--c1', '#' + c1.replace('#',''));
+  if (c2) document.documentElement.style.setProperty('--c2', '#' + c2.replace('#',''));
+  if (c3) document.documentElement.style.setProperty('--c3', '#' + c3.replace('#',''));
+
+  if (delay) {
+    document.querySelector('.c1').style.animationDelay = (0 + delay) + 'ms';
+    document.querySelector('.c2').style.animationDelay = (200 + delay) + 'ms';
+    document.querySelector('.c3').style.animationDelay = (400 + delay) + 'ms';
+  }
+</script>
+</body>
+</html>
