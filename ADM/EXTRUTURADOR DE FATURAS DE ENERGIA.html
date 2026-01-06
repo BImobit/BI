@@ -1326,11 +1326,21 @@ async function downloadArquivosTratados() {
     return m ? `${m[1]}.${m[2]}` : "00.00";
   };
 
-  const makePdfName = (uc, venc, idx) => {
-    const base = `UC ${uc} ${fmtVencDDMM(venc)}`;
-    if (!idx || idx === 1) return `${base}.pdf`;
-    return `${base} (${String(idx).padStart(2, "0")}).pdf`;
-  };
+const makePdfName = (uc, nf, venc, idx) => {
+  const partes = [];
+
+  if (uc) partes.push(`UC ${uc}`);
+
+  const data = fmtVencDDMM(venc);
+  if (data !== "00.00") partes.push(data);
+
+  if (nf) partes.push(`NF ${nf}`);
+
+  const base = partes.join(" ");
+
+  if (!idx || idx === 1) return `${base}.pdf`;
+  return `${base} (${String(idx).padStart(2, "0")}).pdf`;
+};
 
   const forceDownload = async (blob, filename) => {
     const url = URL.createObjectURL(blob);
@@ -1494,7 +1504,13 @@ for (let i = 0; i < pdfBuffers.length; i++) {
 
   // ✅ exatamente 1 fatura → baixar
   const f = list[0];
-  const novoNome = makePdfName(f.numCliente, f.vencimento, 1);
+  const novoNome = makePdfName(
+  f.numCliente,
+  f.notaFiscal,
+  f.vencimento,
+  1
+);
+
   const pdfBlob = new Blob([original.bytes], { type: "application/pdf" });
 
   if (hasOverlay) updateProgressOverlay(0, `Baixando: ${novoNome}`);
