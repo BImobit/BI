@@ -11,6 +11,7 @@
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
   <!-- PDF-LIB (mesclar PDFs) -->
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <style>
     body {
@@ -649,6 +650,129 @@
     body {
       background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
     }
+/* ===== Overlay de Progresso ===== */
+.progress-overlay{
+  position:fixed;
+  inset:0;
+  z-index:999999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  /* fundo escuro + blur do que tá atrás */
+  background:rgba(0,0,0,.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.progress-card{
+  width:min(520px, 92vw);
+  border-radius:18px;
+  padding:18px 18px 14px;
+  background:rgba(20,20,20,.82);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 16px 40px rgba(0,0,0,.35);
+  color:#fff;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.progress-title{
+  font-size:16px;
+  font-weight:700;
+  letter-spacing:.2px;
+  margin-bottom:6px;
+}
+
+.progress-sub{
+  font-size:13px;
+  opacity:.9;
+  margin-bottom:12px;
+  line-height:1.3;
+  word-break: break-word;
+}
+
+.progress-bar-wrap{
+  width:100%;
+  height:12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  overflow:hidden;
+}
+
+.progress-bar{
+  height:100%;
+  width:0%;
+  border-radius:999px;
+  background:linear-gradient(90deg, rgba(62,180,255,1), rgba(0,255,170,1));
+  transition: width .18s ease;
+}
+
+.progress-meta{
+  display:flex;
+  justify-content:space-between;
+  margin-top:10px;
+  font-size:12px;
+  opacity:.92;
+}
+
+.progress-hint{
+  margin-top:10px;
+  font-size:12px;
+  opacity:.85;
+}
+/* Botão Arquivos Tratados (Excel + PDF) */
+.download-treated{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 16px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.18);
+  cursor:pointer;
+
+  /* mix Excel (verde) + PDF (vermelho) */
+  background: linear-gradient(90deg, rgba(0,150,90,.92), rgba(255,70,70,.92));
+  box-shadow: 0 8px 22px rgba(0,0,0,.22);
+  color:#fff;
+
+  transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+}
+
+.download-treated:hover{
+  filter: brightness(1.03);
+  box-shadow: 0 12px 28px rgba(0,0,0,.28);
+  transform: translateY(-1px);
+}
+
+.download-treated:active{
+  transform: translateY(0px) scale(.99);
+}
+
+.treated-icons{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 8px;
+  border-radius:10px;
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.14);
+}
+
+.treated-icon{
+  width:18px;
+  height:18px;
+  object-fit:contain;
+  display:block;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.25));
+}
+
+.treated-text{
+  font-weight:700;
+  letter-spacing:.2px;
+  font-size:14px;
+  line-height:1;
+}
+
   </style>
 
 <script>
@@ -661,6 +785,7 @@
   let pdfBuffers = [];         // [{ name, bytes: Uint8Array }]
   let currentTipo = "enel";
   let selectedFiles = [];      // File[] (multi seleção)
+  let pagesMeta = []; // [{ pdfName, pdfIndex, pageNum }]
 
   // Config de cada tipo de fatura
   const TIPO_CONFIG = {
@@ -791,6 +916,7 @@
   function clearAllPdfs() {
     selectedFiles = [];
     pagesTexts = [];
+    pagesMeta = [];
     pdfBuffers = [];
     renderPdfList();
     updatePdfCountInfo();
@@ -814,114 +940,124 @@
   const isSP = /\b(SÃO\s*PAULO|SAO\s*PAULO|Sao\s*Paulo|São\s*Paulo|\bSP\b)\b/i.test(txt);
   const isCE = /\bCE\b/i.test(txt);
 
-  // ==========================
-  // ==========================
-  // ======== TIPO SP =========
-  // ==========================
-  // ==========================
-  if (isSP) {
+// ==========================
+// ==========================
+// ======== TIPO SP =========
+// ==========================
+// ==========================
+if (isSP) {
 
-    // ---------- NUM_CLIENTE
-    let numCliente = "";
-    const nc = txt.match(/INSC\.?\s*EST:\s*(?:ISENTO\s*)?(\d{6,})/i);
-    if (nc) numCliente = nc[1];
+  // ---------- NUM_CLIENTE (NA SUA REGRA = UC)
+  // Dez: "... INSC. EST: 119639... 204239674 R$50,88 ..."
+  // Jan: "0202266715 / 100234314059 ..."
+  let numCliente = "";
 
-    // ---------- MES/ANO, VENCIMENTO, TOTAL
-    let mesAno = "";
-    let vencimento = "";
-    let total = "";
+  // (1) Padrão "0202266715 / 100234314059 ..."
+  let mUC = txt.match(/^\s*(\d{8,12})\s*\/\s*(\d{6,14})\b/);
 
-    const mSP = txt.match(/R\$\s*([\d.,]+)\s+(\d{2}\/\d{2}\/\d{4}).{0,200}?\b(\d{2}\/\d{4})\b/i);
-    if (mSP) {
-      total      = mSP[1];
-      vencimento = mSP[2];
-      mesAno     = mSP[3];
-    }
+  // (2) Padrão "... INSC. EST: (ISENTO|número) 204239674 R$ 50,88"
+  if (!mUC) {
+    mUC = txt.match(/\bINSC\.?\s*EST:\s*(?:ISENTO|\d+)\s+(\d{7,12})\s+R\$\s*[\d.,]+/i);
+  }
 
-    if (!numCliente || !mesAno || !vencimento || !total) return;
+  // (3) Fallback: número grande imediatamente antes do primeiro "R$"
+  if (!mUC) {
+    mUC = txt.match(/\b(\d{7,12})\s+R\$\s*[\d.,]+/i);
+  }
 
-    // ---------- NF + CHAVE
-    const nfMatch = txt.match(/NOTA FISCAL Nº?\s*([\d]+)/i);
-    const notaFiscal = nfMatch ? nfMatch[1] : "";
+  if (mUC) numCliente = mUC[1];
 
-// ---------- CHAVE DE ACESSO (SP) - 2 modos
-    let chaveAcesso = "";
+  // ---------- MES/ANO, VENCIMENTO, TOTAL (SP) - robusto
+  let mesAno = "";
+  let vencimento = "";
+  let total = "";
 
-    // (1) Modo 1: "Chave de acesso: 3525 1261 ..."
-    const chaveNum = txt.match(/chave\s+de\s+acesso:\s*([\d ]{30,})/i);
-    if (chaveNum) {
-      chaveAcesso = chaveNum[1].replace(/\s+/g, "");
-    } else {
-      // (2) Modo 2: "Nota Fiscal de Conta de Energia Eletrica 4229.EF53...."
-      const chaveHex = txt.match(/Nota\s+Fiscal\s+de\s+Conta\s+de\s+Energia\s+Eletrica\s+([0-9A-F.]{15,})/i)
-        || txt.match(/\b([0-9A-F]{4}(?:\.[0-9A-F]{4}){3,})\b/i); // fallback bem direto
+  // TOTAL (tenta "VALOR DO DOCUMENTO", senão o primeiro R$)
+  let mTotal =
+    txt.match(/VALOR\s+DO\s+DOCUMENTO:\s*R\$\s*([\d.,]+)/i) ||
+    txt.match(/\bR\$\s*([\d.,]+)/i);
+  if (mTotal) total = mTotal[1];
 
-      if (chaveHex) {
-        // normaliza: tira pontos, deixa só HEX
-        chaveAcesso = (chaveHex[1] || "").replace(/[^0-9A-F]/gi, "").toUpperCase();
-      }
-    }
+  // VENCIMENTO (tenta "DATA DE VENCIMENTO", senão primeira data dd/mm/aaaa)
+  let mVenc =
+    txt.match(/DATA\s+DE\s+VENCIMENTO:\s*(\d{2}\/\d{2}\/\d{4})/i) ||
+    txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b/i);
+  if (mVenc) vencimento = mVenc[1];
 
-    // ---------- BANDEIRA
-    let bandeiraTarifaria = "";
-    const bandMatch = txt.match(/Bandeira\(s\)\s*tarif[áa]ria\(s\).*?:\s*([A-Za-zÀ-ú ]+)/i);
-    if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
+  // MES/ANO (pega o primeiro MM/YYYY que aparecer; no teu texto vem "12/2025")
+  let mMesAno =
+    txt.match(/Página\s+\d+\/\d+\s+\d+\s+(\d{2}\/\d{4})\b/i) ||
+    txt.match(/\b(\d{2}\/\d{4})\b/i);
+  if (mMesAno) mesAno = mMesAno[1];
 
-    // ---------- LEITURAS / CONSUMO / DIAS (SP)
-    let dataLeituraAnterior = "";
-    let dataLeituraAtual = "";
-    let numeroDias = "";
-    let consumoKwh = "";
+  // ---------- NF + CHAVE
+  const nfMatch = txt.match(/NOTA\s+FISCAL\s+N[º°]?\s*([\d]+)/i);
+  const notaFiscal = nfMatch ? nfMatch[1] : "";
 
-    // Datas (anterior / atual / próxima)
-    const d3 = txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b/);
-    if (d3) {
-      dataLeituraAnterior = d3[1];
-      dataLeituraAtual    = d3[2];
-    }
+  let chaveAcesso = "";
+  const chaveNum = txt.match(/chave\s+de\s+acesso:\s*([\d ]{30,})/i);
+  if (chaveNum) chaveAcesso = chaveNum[1].replace(/\s+/g, "");
 
-    // Consumo + dias pela linha do mês (NOV/25 72,000 30 CAL)
-    function mesAnoToMesAbrev(mesAno) {
-      const mm = parseInt(mesAno.slice(0,2), 10);
-      const yy = mesAno.slice(5,7);
-      const map = {1:"JAN",2:"FEV",3:"MAR",4:"ABR",5:"MAI",6:"JUN",7:"JUL",8:"AGO",9:"SET",10:"OUT",11:"NOV",12:"DEZ"};
-      return map[mm] ? `${map[mm]}/${yy}` : "";
-    }
+  // ---------- BANDEIRA
+  let bandeiraTarifaria = "";
+  const bandMatch = txt.match(/Bandeira\(s\)[^:]*:\s*([A-Za-zÀ-ú ]{3,})/i);
+  if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
 
-    const tagMes = mesAnoToMesAbrev(mesAno);
+  // ---------- LEITURAS / CONSUMO / DIAS (SP)
+  let dataLeituraAnterior = "";
+  let dataLeituraAtual = "";
+  let numeroDias = "";
+  let consumoKwh = "";
+
+  // Datas (anterior / atual / próxima) - pega as 2 primeiras
+  const d3 = txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b/);
+  if (d3) {
+    dataLeituraAnterior = d3[1];
+    dataLeituraAtual    = d3[2];
+  }
+
+  // Consumo prioriza ENRG ATVÚNICO
+  const enrg = txt.match(/ENRG\s*ATV[ÚU]NICO\s+([\d.,]+)/i);
+  if (enrg) consumoKwh = enrg[1];
+
+  // Dias: tenta pegar o "31" do "DEZ/25 70,267 31 CAL"
+  if (mesAno) {
+    const mm = parseInt(mesAno.slice(0,2), 10);
+    const yy = mesAno.slice(5,7);
+    const map = {1:"JAN",2:"FEV",3:"MAR",4:"ABR",5:"MAI",6:"JUN",7:"JUL",8:"AGO",9:"SET",10:"OUT",11:"NOV",12:"DEZ"};
+    const tagMes = map[mm] ? `${map[mm]}/${yy}` : "";
+
     if (tagMes) {
       const reLinhaMes = new RegExp(`\\b${tagMes.replace("/","\\/")}\\b\\s+([\\d.,]+)\\s+(\\d{1,3})\\s+CAL\\b`, "i");
       const lm = txt.match(reLinhaMes);
       if (lm) {
-        consumoKwh = lm[1];
+        if (!consumoKwh) consumoKwh = lm[1];
         numeroDias = lm[2];
       }
     }
-
-    // Fallback consumo
-    if (!consumoKwh) {
-      const enrg = txt.match(/ENRG\s*ATV[ÚU]NICO\s+([\d.,]+)/i);
-      if (enrg) consumoKwh = enrg[1];
-    }
-
-    resultados.push({
-      pagina: idx + 1,
-      numCliente,
-      mesAno,
-      vencimento,
-      total,
-      bandeiraTarifaria,
-      dataLeituraAnterior,
-      dataLeituraAtual,
-      numeroDias,
-      consumoKwh,
-      chaveAcesso,
-      notaFiscal,
-      textoBruto: txt
-    });
-
-    return;
   }
+
+  // ---------- Validação mínima (mantém tua lógica)
+  if (!numCliente || !mesAno || !vencimento || !total) return;
+
+  resultados.push({
+    pagina: idx + 1,
+    numCliente, // <-- continua igual, só mudou a fonte do valor (agora é UC)
+    mesAno,
+    vencimento,
+    total,
+    bandeiraTarifaria,
+    dataLeituraAnterior,
+    dataLeituraAtual,
+    numeroDias,
+    consumoKwh,
+    chaveAcesso,
+    notaFiscal,
+    textoBruto: txt
+  });
+
+  return;
+}
 
   // ==========================
   // ==========================
@@ -1060,6 +1196,7 @@
     }
 
     pagesTexts = [];
+    pagesMeta = [];
     pdfBuffers = [];
 
     resultDiv.style.display = "block";
@@ -1090,6 +1227,7 @@
           const pageText = cleanText(rawPageText).trim();
 
           pagesTexts.push(pageText);
+          pagesMeta.push({ pdfName: f.name, pdfIndex: i, pageNum: pageNum });
           totalPages++;
         }
       }
@@ -1110,170 +1248,271 @@
       button.disabled = false;
     }
   }
+let __progressTotal = 0;
+let __progressDone = 0;
 
-  // Gera XLSX conforme o tipo atual
-  async function downloadXlsx() {
-    const status = document.getElementById("status");
+function showProgressOverlay(total, initialText = "Preparando...") {
+  __progressTotal = Math.max(0, Number(total) || 0);
+  __progressDone = 0;
 
-    if (!pagesTexts || pagesTexts.length === 0) {
-      alert("Nenhum texto de página encontrado. Converta o PDF primeiro.");
+  const ov = document.getElementById("progressOverlay");
+  const sub = document.getElementById("progressSub");
+  const bar = document.getElementById("progressBar");
+  const count = document.getElementById("progressCount");
+  const pct = document.getElementById("progressPct");
+
+  if (!ov || !sub || !bar || !count || !pct) return;
+
+  ov.style.display = "flex";
+  sub.textContent = initialText;
+
+  count.textContent = `0/${__progressTotal}`;
+  pct.textContent = `0%`;
+  bar.style.width = "0%";
+}
+
+function updateProgressOverlay(doneInc = 1, text = "") {
+  __progressDone += (Number(doneInc) || 0);
+  if (__progressDone < 0) __progressDone = 0;
+  if (__progressDone > __progressTotal) __progressDone = __progressTotal;
+
+  const sub = document.getElementById("progressSub");
+  const bar = document.getElementById("progressBar");
+  const count = document.getElementById("progressCount");
+  const pct = document.getElementById("progressPct");
+
+  if (text && sub) sub.textContent = text;
+
+  const percent = __progressTotal > 0
+    ? Math.round((__progressDone / __progressTotal) * 100)
+    : 0;
+
+  if (count) count.textContent = `${__progressDone}/${__progressTotal}`;
+  if (pct) pct.textContent = `${percent}%`;
+  if (bar) bar.style.width = `${percent}%`;
+}
+
+function hideProgressOverlay(finalText = "") {
+  const ov = document.getElementById("progressOverlay");
+  const sub = document.getElementById("progressSub");
+  if (finalText && sub) sub.textContent = finalText;
+
+  // dá um tiquinho de tempo pro usuário ver "Concluído"
+  setTimeout(() => {
+    if (ov) ov.style.display = "none";
+  }, 450);
+}
+
+async function downloadArquivosTratados() {
+  const status = document.getElementById("status");
+
+  if (!pagesTexts || pagesTexts.length === 0 || !pdfBuffers || pdfBuffers.length === 0) {
+    alert("Primeiro clique em Converter para ler os PDFs.");
+    return;
+  }
+
+  if (currentTipo !== "enel") {
+    alert("Download em lote (sem ZIP) disponível apenas para ENEL.");
+    return;
+  }
+
+  // =============================
+  // Helpers locais
+  // =============================
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  const fmtVencDDMM = (venc) => {
+    const m = (venc || "").match(/^(\d{2})\/(\d{2})\/\d{4}$/);
+    return m ? `${m[1]}.${m[2]}` : "00.00";
+  };
+
+  const makePdfName = (uc, venc, idx) => {
+    const base = `UC ${uc} ${fmtVencDDMM(venc)}`;
+    if (!idx || idx === 1) return `${base}.pdf`;
+    return `${base} (${String(idx).padStart(2, "0")}).pdf`;
+  };
+
+  const forceDownload = async (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // dá tempo pro browser iniciar o download antes de revogar
+    await sleep(420);
+    URL.revokeObjectURL(url);
+  };
+
+  // Overlay safe calls (se você colou as funções do overlay)
+  const hasOverlay = typeof showProgressOverlay === "function"
+    && typeof updateProgressOverlay === "function"
+    && typeof hideProgressOverlay === "function";
+
+  try {
+    // =============================
+    // 1) Parse das faturas
+    // =============================
+    status.textContent = "Identificando faturas...";
+    const faturas = parseEnelFaturas(pagesTexts);
+
+    if (!faturas || faturas.length === 0) {
+      alert("Nenhuma fatura ENEL padrão encontrada no texto.");
       return;
     }
 
-    try {
-      const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet("FATURAS");
+    // =============================
+    // 2) Agrupar por PDF original (pra saber quantos downloads vai ter)
+    // =============================
+    const byPdf = {}; // { pdfName: [faturas...] }
 
-      if (currentTipo === "enel") {
-        const faturas = parseEnelFaturas(pagesTexts);
+    for (const f of faturas) {
+      const meta = pagesMeta && pagesMeta[f.pagina - 1];
+      if (!meta) continue;
 
-        if (faturas.length === 0) {
-          alert("Nenhuma fatura ENEL padrão encontrada no texto.");
-          return;
-        }
-
-        // ✅ SEM CNPJ/CEP/END/MUN/UF
-        const rows = faturas.map(f => [
-          f.pagina,
-          f.numCliente,
-          f.mesAno,
-          f.vencimento,
-          f.total,
-          f.bandeiraTarifaria,
-          f.dataLeituraAnterior,
-          f.dataLeituraAtual,
-          f.numeroDias,
-          f.consumoKwh,
-          f.chaveAcesso,
-          f.notaFiscal,
-          f.textoBruto
-        ]);
-
-        sheet.addTable({
-          name: "FATURAS",
-          ref: "A1",
-          headerRow: true,
-          totalsRow: false,
-          style: {
-            theme: "TableStyleMedium2",
-            showRowStripes: true
-          },
-          columns: [
-            { name: "PAGINA",             filterButton: true },
-            { name: "NUM_CLIENTE",        filterButton: true },
-            { name: "MES_ANO",            filterButton: true },
-            { name: "VENCIMENTO",         filterButton: true },
-            { name: "TOTAL",              filterButton: true },
-            { name: "BANDEIRA_TARIFARIA", filterButton: true },
-            { name: "DT_LEIT_ANTERIOR",   filterButton: true },
-            { name: "DT_LEIT_ATUAL",      filterButton: true },
-            { name: "NUM_DIAS",           filterButton: true },
-            { name: "CONSUMO_KWH",        filterButton: true },
-            { name: "CHAVE_ACESSO",       filterButton: true },
-            { name: "NOTA_FISCAL",        filterButton: true },
-            { name: "TEXTO_BRUTO",        filterButton: false }
-          ],
-          rows: rows
-        });
-
-        sheet.getColumn(1).width  = 8;
-        sheet.getColumn(2).width  = 14;
-        sheet.getColumn(3).width  = 10;
-        sheet.getColumn(4).width  = 12;
-        sheet.getColumn(5).width  = 12;
-        sheet.getColumn(6).width  = 22;
-        sheet.getColumn(7).width  = 14;
-        sheet.getColumn(8).width  = 14;
-        sheet.getColumn(9).width  = 10;
-        sheet.getColumn(10).width = 14;
-        sheet.getColumn(11).width = 36;
-        sheet.getColumn(12).width = 14;
-        sheet.getColumn(13).width = 120;
-
-      } else {
-        const rows = pagesTexts.map((txt, idx) => [idx + 1, txt]);
-
-        sheet.addTable({
-          name: "FATURAS",
-          ref: "A1",
-          headerRow: true,
-          totalsRow: false,
-          style: {
-            theme: "TableStyleMedium9",
-            showRowStripes: true
-          },
-          columns: [
-            { name: "PAGINA",      filterButton: true },
-            { name: "TEXTO_BRUTO", filterButton: false }
-          ],
-          rows: rows
-        });
-
-        sheet.getColumn(1).width = 8;
-        sheet.getColumn(2).width = 120;
-      }
-
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob(
-        [buffer],
-        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
-      );
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = currentTipo === "enel" ? "FATURAS_ENEL.xlsx" : "FATURAS.xlsx";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      status.textContent = "Arquivo Excel gerado com sucesso.";
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao gerar o arquivo Excel.");
-      status.textContent = "Erro ao gerar o arquivo Excel.";
+      if (!byPdf[meta.pdfName]) byPdf[meta.pdfName] = [];
+      byPdf[meta.pdfName].push(f);
     }
+
+    Object.values(byPdf).forEach(list => list.sort((a, b) => a.pagina - b.pagina));
+
+    // total = 1 excel + 1 pdf estruturado + (somente PDFs originais com 1 fatura)
+    let totalDownloads = 2;
+
+    for (let i = 0; i < pdfBuffers.length; i++) {
+      const list = byPdf[pdfBuffers[i].name];
+      if (list && list.length === 1) totalDownloads += 1; // só 1 fatura => baixa 1 pdf
+      // se 0 ou >1 => não baixa nada (ignora)
+    }
+
+    if (hasOverlay) showProgressOverlay(totalDownloads, "Preparando downloads...");
+
+    // =============================
+    // 3) Excel estruturado
+    // =============================
+    status.textContent = "Gerando Excel estruturado...";
+    if (hasOverlay) updateProgressOverlay(0, "Gerando: EXCEL_ESTRUTURADO.xlsx");
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("FATURAS");
+
+    const rows = faturas.map(f => [
+      f.pagina,
+      f.numCliente,
+      f.mesAno,
+      f.vencimento,
+      f.total,
+      f.bandeiraTarifaria,
+      f.dataLeituraAnterior,
+      f.dataLeituraAtual,
+      f.numeroDias,
+      f.consumoKwh,
+      f.chaveAcesso,
+      f.notaFiscal,
+      f.textoBruto
+    ]);
+
+    sheet.addTable({
+      name: "FATURAS",
+      ref: "A1",
+      headerRow: true,
+      totalsRow: false,
+      style: { theme: "TableStyleMedium2", showRowStripes: true },
+      columns: [
+        { name: "PAGINA" },
+        { name: "NUM_CLIENTE" },
+        { name: "MES_ANO" },
+        { name: "VENCIMENTO" },
+        { name: "TOTAL" },
+        { name: "BANDEIRA_TARIFARIA" },
+        { name: "DT_LEIT_ANTERIOR" },
+        { name: "DT_LEIT_ATUAL" },
+        { name: "NUM_DIAS" },
+        { name: "CONSUMO_KWH" },
+        { name: "CHAVE_ACESSO" },
+        { name: "NOTA_FISCAL" },
+        { name: "TEXTO_BRUTO" }
+      ],
+      rows
+    });
+
+    const excelBytes = await workbook.xlsx.writeBuffer();
+    const excelBlob = new Blob([excelBytes], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    });
+
+    if (hasOverlay) updateProgressOverlay(0, "Baixando: EXCEL_ESTRUTURADO.xlsx");
+    await forceDownload(excelBlob, "EXCEL_ESTRUTURADO.xlsx");
+    if (hasOverlay) updateProgressOverlay(1);
+    await sleep(200);
+
+    // =============================
+    // 4) PDF estruturado (mesclado)
+    // =============================
+    status.textContent = "Gerando PDF estruturado...";
+    if (hasOverlay) updateProgressOverlay(0, "Gerando: PDF_ESTRUTURADO_ENEL.pdf");
+
+    const mergedPdf = await PDFLib.PDFDocument.create();
+
+    for (let i = 0; i < pdfBuffers.length; i++) {
+      const donor = await PDFLib.PDFDocument.load(pdfBuffers[i].bytes);
+      const copied = await mergedPdf.copyPages(donor, donor.getPageIndices());
+      copied.forEach(p => mergedPdf.addPage(p));
+    }
+
+    const mergedPdfBytes = await mergedPdf.save();
+    const mergedBlob = new Blob([mergedPdfBytes], { type: "application/pdf" });
+
+    if (hasOverlay) updateProgressOverlay(0, "Baixando: PDF_ESTRUTURADO_ENEL.pdf");
+    await forceDownload(mergedBlob, "PDF_ESTRUTURADO_ENEL.pdf");
+    if (hasOverlay) updateProgressOverlay(1);
+    await sleep(220);
+
+// =============================
+// 5) PDFs originais renomeados
+// Regra: só baixar PDFs que tenham EXATAMENTE 1 fatura
+// =============================
+status.textContent = "Baixando PDFs originais (somente faturas únicas)...";
+
+for (let i = 0; i < pdfBuffers.length; i++) {
+  const original = pdfBuffers[i];
+  const list = byPdf[original.name];
+
+  // ❌ não identificou fatura → não baixa
+  if (!list || list.length === 0) continue;
+
+  // ❌ mais de uma fatura no mesmo PDF → não baixar
+  if (list.length > 1) {
+    console.warn(
+      `[IGNORADO] PDF com múltiplas faturas (${list.length}):`,
+      original.name
+    );
+    continue;
   }
 
-  async function downloadMergedPdf() {
-    const status = document.getElementById("status");
+  // ✅ exatamente 1 fatura → baixar
+  const f = list[0];
+  const novoNome = makePdfName(f.numCliente, f.vencimento, 1);
+  const pdfBlob = new Blob([original.bytes], { type: "application/pdf" });
 
-    if (!pdfBuffers || pdfBuffers.length === 0) {
-      alert("Nenhum PDF em memória. Primeiro clique em Converter.");
-      return;
-    }
+  if (hasOverlay) updateProgressOverlay(0, `Baixando: ${novoNome}`);
+  await forceDownload(pdfBlob, novoNome);
+  if (hasOverlay) updateProgressOverlay(1);
+  await sleep(220);
+}
 
-    try {
-      status.textContent = `Mesclando ${pdfBuffers.length} PDF(s)...`;
-
-      const mergedPdf = await PDFLib.PDFDocument.create();
-
-      for (let i = 0; i < pdfBuffers.length; i++) {
-        const donor = await PDFLib.PDFDocument.load(pdfBuffers[i].bytes);
-        const copiedPages = await mergedPdf.copyPages(donor, donor.getPageIndices());
-        copiedPages.forEach(p => mergedPdf.addPage(p));
-      }
-
-      const mergedBytes = await mergedPdf.save();
-      const blob = new Blob([mergedBytes], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `FATURAS_MESCLADO_${currentTipo.toUpperCase()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      status.textContent = "PDF mesclado gerado com sucesso.";
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao mesclar os PDFs.");
-      status.textContent = "Erro ao mesclar os PDFs.";
-    }
+    status.textContent = "Downloads iniciados com sucesso.";
+    if (hasOverlay) hideProgressOverlay("Concluído! ✅");
+  } catch (e) {
+    console.error(e);
+    status.textContent = "Erro ao baixar arquivos tratados.";
+    if (hasOverlay) hideProgressOverlay("Deu erro. ❌");
+    alert("Deu erro ao gerar/baixar os arquivos. Veja o console (F12).");
   }
+}
+
 
   function openFormAtual() {
     const cfg = TIPO_CONFIG[currentTipo];
@@ -1337,8 +1576,7 @@
         </span>
       </label>
 
-      <!--
-      <label class="tipo-option">
+      <!--<label class="tipo-option">
         <input type="radio" name="tipoFatura" value="equatorial" onclick="setTipo('equatorial')">
         <span class="tipo-option-content">
           <img
@@ -1347,10 +1585,9 @@
             class="tipo-option-logo"
           >
         </span>
-      </label>
-      -->
+      </label>-->
     </div>
-    
+
     <!-- Passo 1 -->
     <div class="step-hint">
       <div class="step-bullet">1</div>
@@ -1435,24 +1672,14 @@
                 de acordo com a concessionária selecionada.
               </div>
 
-              <!-- Excel -->
-              <button class="download-button download-excel" type="button" onclick="downloadXlsx()">
-                <img
-                  class="download-icon"
-                  src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo_excel.png"
-                  alt="Excel"
-                >
-                <span>Baixar Excel Estruturado</span>
-              </button>
-
-              <!-- PDF mesclado -->
-              <button class="download-button download-pdf" type="button" onclick="downloadMergedPdf()">
-                <img
-                  class="download-icon"
-                  src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo_pdf.png"
-                  alt="PDF"
-                >
-                <span>Baixar PDF mesclado</span>
+              <button class="download-button download-treated" type="button" onclick="downloadArquivosTratados()">
+                <span class="treated-icons">
+                  <img class="treated-icon" src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo_excel.png" alt="Excel">
+                  <img class="treated-icon" src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo_pdf.png" alt="PDF">
+                </span>
+                <span class="treated-text">
+                  Baixar Arquivos Tratados
+                </span>
               </button>
 
               <!-- DEBUG -->
@@ -1531,6 +1758,29 @@
       <span>paulosilva@mobit.com.br</span>
     </div>
   </div>
+<!-- OVERLAY DE PROGRESSO (fica por cima de tudo) -->
+<div id="progressOverlay" class="progress-overlay" style="display:none;">
+  <div class="progress-card">
+    <div class="progress-title">Baixando arquivos tratados...</div>
+
+    <div class="progress-sub" id="progressSub">
+      Preparando...
+    </div>
+
+    <div class="progress-bar-wrap" aria-label="Progresso">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+
+    <div class="progress-meta">
+      <span id="progressCount">0/0</span>
+      <span id="progressPct">0%</span>
+    </div>
+
+    <div class="progress-hint">
+      Se o navegador pedir permissão para múltiplos downloads, clique em <b>Permitir</b>.
+    </div>
+  </div>
+</div>
 
   <script>
     document.addEventListener('contextmenu', e => e.preventDefault());
@@ -1564,6 +1814,4 @@
     })();
   </script>
 </body>
-
 </html>
-
