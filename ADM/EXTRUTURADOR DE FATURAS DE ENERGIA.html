@@ -776,6 +776,7 @@
   </style>
 
 <script>
+  
   // Config pdf.js
   pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -934,195 +935,201 @@
 
     pages.forEach((txt, idx) => {
 
-  // ==========================
-  // DETECÇÃO DE TIPO POR PÁGINA
-  // ==========================
-  const isSP = /\b(SÃO\s*PAULO|SAO\s*PAULO|Sao\s*Paulo|São\s*Paulo|\bSP\b)\b/i.test(txt);
-  const isCE = /\bCE\b/i.test(txt);
+      console.group(`📄 Página ${idx + 1}`);
 
-// ==========================
-// ==========================
-// ======== TIPO SP =========
-// ==========================
-// ==========================
-if (isSP) {
+      // ==========================
+      // DETECÇÃO DE TIPO POR PÁGINA
+      // ==========================
+      const isSP = /\b(SÃO\s*PAULO|SAO\s*PAULO|Sao\s*Paulo|São\s*Paulo|\bSP\b)\b/i.test(txt);
+      const isCE = /Companhia\s+Energ[eé]tica\s+do\s+Cear[aá]/i.test(txt);
 
-  // ---------- NUM_CLIENTE (NA SUA REGRA = UC)
-  // Dez: "... INSC. EST: 119639... 204239674 R$50,88 ..."
-  // Jan: "0202266715 / 100234314059 ..."
-  let numCliente = "";
+      console.log("isSP:", isSP);
+      console.log("isCE:", isCE);
 
-  // (1) Padrão "0202266715 / 100234314059 ..."
-  let mUC = txt.match(/^\s*(\d{8,12})\s*\/\s*(\d{6,14})\b/);
+      // ==========================
+      // ======== TIPO SP =========
+      // ==========================
+      // ⚠️ CORREÇÃO: SP só entra se NÃO for CE
+      if (isSP && !isCE) {
 
-  // (2) Padrão "... INSC. EST: (ISENTO|número) 204239674 R$ 50,88"
-  if (!mUC) {
-    mUC = txt.match(/\bINSC\.?\s*EST:\s*(?:ISENTO|\d+)\s+(\d{7,12})\s+R\$\s*[\d.,]+/i);
-  }
+        let numCliente = "";
 
-  // (3) Fallback: número grande imediatamente antes do primeiro "R$"
-  if (!mUC) {
-    mUC = txt.match(/\b(\d{7,12})\s+R\$\s*[\d.,]+/i);
-  }
+        let mUC = txt.match(/^\s*(\d{8,12})\s*\/\s*(\d{6,14})\b/);
 
-  if (mUC) numCliente = mUC[1];
+        if (!mUC) {
+          mUC = txt.match(/\bINSC\.?\s*EST:\s*(?:ISENTO|\d+)\s+(\d{7,12})\s+R\$\s*[\d.,]+/i);
+        }
 
-  // ---------- MES/ANO, VENCIMENTO, TOTAL (SP) - robusto
-  let mesAno = "";
-  let vencimento = "";
-  let total = "";
+        if (!mUC) {
+          mUC = txt.match(/\b(\d{7,12})\s+R\$\s*[\d.,]+/i);
+        }
 
-  // TOTAL (tenta "VALOR DO DOCUMENTO", senão o primeiro R$)
-  let mTotal =
-    txt.match(/VALOR\s+DO\s+DOCUMENTO:\s*R\$\s*([\d.,]+)/i) ||
-    txt.match(/\bR\$\s*([\d.,]+)/i);
-  if (mTotal) total = mTotal[1];
+        if (mUC) numCliente = mUC[1];
 
-  // VENCIMENTO (tenta "DATA DE VENCIMENTO", senão primeira data dd/mm/aaaa)
-  let mVenc =
-    txt.match(/DATA\s+DE\s+VENCIMENTO:\s*(\d{2}\/\d{2}\/\d{4})/i) ||
-    txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b/i);
-  if (mVenc) vencimento = mVenc[1];
+        let mesAno = "";
+        let vencimento = "";
+        let total = "";
 
-  // MES/ANO (pega o primeiro MM/YYYY que aparecer; no teu texto vem "12/2025")
-  let mMesAno =
-    txt.match(/Página\s+\d+\/\d+\s+\d+\s+(\d{2}\/\d{4})\b/i) ||
-    txt.match(/\b(\d{2}\/\d{4})\b/i);
-  if (mMesAno) mesAno = mMesAno[1];
+        let mTotal =
+          txt.match(/VALOR\s+DO\s+DOCUMENTO:\s*R\$\s*([\d.,]+)/i) ||
+          txt.match(/\bR\$\s*([\d.,]+)/i);
+        if (mTotal) total = mTotal[1];
 
-  // ---------- NF + CHAVE
-  const nfMatch = txt.match(/NOTA\s+FISCAL\s+N[º°]?\s*([\d]+)/i);
-  const notaFiscal = nfMatch ? nfMatch[1] : "";
+        let mVenc =
+          txt.match(/DATA\s+DE\s+VENCIMENTO:\s*(\d{2}\/\d{2}\/\d{4})/i) ||
+          txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b/i);
+        if (mVenc) vencimento = mVenc[1];
 
-  let chaveAcesso = "";
-  const chaveNum = txt.match(/chave\s+de\s+acesso:\s*([\d ]{30,})/i);
-  if (chaveNum) chaveAcesso = chaveNum[1].replace(/\s+/g, "");
+        let mMesAno =
+          txt.match(/Página\s+\d+\/\d+\s+\d+\s+(\d{2}\/\d{4})\b/i) ||
+          txt.match(/\b(\d{2}\/\d{4})\b/i);
+        if (mMesAno) mesAno = mMesAno[1];
 
-  // ---------- BANDEIRA
-  let bandeiraTarifaria = "";
-  const bandMatch = txt.match(/Bandeira\(s\)[^:]*:\s*([A-Za-zÀ-ú ]{3,})/i);
-  if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
+        const nfMatch = txt.match(/NOTA\s+FISCAL\s+N[º°]?\s*([\d]+)/i);
+        const notaFiscal = nfMatch ? nfMatch[1] : "";
 
-  // ---------- LEITURAS / CONSUMO / DIAS (SP)
-  let dataLeituraAnterior = "";
-  let dataLeituraAtual = "";
-  let numeroDias = "";
-  let consumoKwh = "";
+        let chaveAcesso = "";
+        const chaveNum = txt.match(/chave\s+de\s+acesso:\s*([\d ]{30,})/i);
+        if (chaveNum) chaveAcesso = chaveNum[1].replace(/\s+/g, "");
 
-  // Datas (anterior / atual / próxima) - pega as 2 primeiras
-  const d3 = txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b/);
-  if (d3) {
-    dataLeituraAnterior = d3[1];
-    dataLeituraAtual    = d3[2];
-  }
+        let bandeiraTarifaria = "";
+        const bandMatch = txt.match(/Bandeira\(s\)[^:]*:\s*([A-Za-zÀ-ú ]{3,})/i);
+        if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
 
-  // Consumo prioriza ENRG ATVÚNICO
-  const enrg = txt.match(/ENRG\s*ATV[ÚU]NICO\s+([\d.,]+)/i);
-  if (enrg) consumoKwh = enrg[1];
+        let dataLeituraAnterior = "";
+        let dataLeituraAtual = "";
+        let numeroDias = "";
+        let consumoKwh = "";
 
-  // Dias: tenta pegar o "31" do "DEZ/25 70,267 31 CAL"
-  if (mesAno) {
-    const mm = parseInt(mesAno.slice(0,2), 10);
-    const yy = mesAno.slice(5,7);
-    const map = {1:"JAN",2:"FEV",3:"MAR",4:"ABR",5:"MAI",6:"JUN",7:"JUL",8:"AGO",9:"SET",10:"OUT",11:"NOV",12:"DEZ"};
-    const tagMes = map[mm] ? `${map[mm]}/${yy}` : "";
+        const d3 = txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b\s+\b(\d{2}\/\d{2}\/\d{4})\b/);
+        if (d3) {
+          dataLeituraAnterior = d3[1];
+          dataLeituraAtual    = d3[2];
+        }
 
-    if (tagMes) {
-      const reLinhaMes = new RegExp(`\\b${tagMes.replace("/","\\/")}\\b\\s+([\\d.,]+)\\s+(\\d{1,3})\\s+CAL\\b`, "i");
-      const lm = txt.match(reLinhaMes);
-      if (lm) {
-        if (!consumoKwh) consumoKwh = lm[1];
-        numeroDias = lm[2];
+        const enrg = txt.match(/ENRG\s*ATV[ÚU]NICO\s+([\d.,]+)/i);
+        if (enrg) consumoKwh = enrg[1];
+
+        if (!numCliente || !mesAno || !vencimento || !total) {
+          console.warn("❌ SP FALHOU NA VALIDAÇÃO", {
+            numCliente, mesAno, vencimento, total
+          });
+          console.groupEnd();
+          return;
+        }
+
+        console.log("✅ SP OK");
+
+        resultados.push({
+          pagina: idx + 1,
+          numCliente,
+          mesAno,
+          vencimento,
+          total,
+          bandeiraTarifaria,
+          dataLeituraAnterior,
+          dataLeituraAtual,
+          numeroDias,
+          consumoKwh,
+          chaveAcesso,
+          notaFiscal,
+          textoBruto: txt
+        });
+
+        console.groupEnd();
+        return;
       }
-    }
-  }
 
-  // ---------- Validação mínima (mantém tua lógica)
-  if (!numCliente || !mesAno || !vencimento || !total) return;
+      // ==========================
+      // ======== TIPO CE =========
+      // ==========================
+      if (isCE) {
 
-  resultados.push({
-    pagina: idx + 1,
-    numCliente, // <-- continua igual, só mudou a fonte do valor (agora é UC)
-    mesAno,
-    vencimento,
-    total,
-    bandeiraTarifaria,
-    dataLeituraAnterior,
-    dataLeituraAtual,
-    numeroDias,
-    consumoKwh,
-    chaveAcesso,
-    notaFiscal,
-    textoBruto: txt
-  });
+        let numCliente = "";
 
-  return;
-}
+        const ucMatch =
+          txt.match(/INSC\.?\s*EST:?\s*([\d]{6,})/i) ||
+          txt.match(/\bNO DO CLIENTE\b[\s\S]{0,80}?(\d{6,})/i);
 
-  // ==========================
-  // ==========================
-  // ======== TIPO CE =========
-  // ==========================
-  // ==========================
-  if (isCE) {
+        if (ucMatch) numCliente = ucMatch[1];
 
-    const main = txt.match(
-      /INSC\. EST:\s*\d+\s+(\d+)\s+(\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+R\$ ?([\d.,]+)/i
-    );
-    if (!main) return;
+        let mesAno = "";
+        const mesAnoMatch = txt.match(/\b(\d{2}\/\d{4})\b/);
+        if (mesAnoMatch) mesAno = mesAnoMatch[1];
 
-    const numCliente = main[1];
-    const mesAno     = main[2];
-    const vencimento = main[3];
-    const total      = main[4];
+        let vencimento = "";
+        const vencMatch =
+          txt.match(/VENCIMENTO\s+(\d{2}\/\d{2}\/\d{4})/i) ||
+          txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+        if (vencMatch) vencimento = vencMatch[1];
 
-    const nfMatch = txt.match(/NOTA FISCAL Nº?\s*([\d]+)/i);
-    const notaFiscal = nfMatch ? nfMatch[1] : "";
+        let total = "";
+        const totalMatch =
+          txt.match(/TOTAL\s+A\s+PAGAR\s+R\$\s*([\d.,]+)/i) ||
+          txt.match(/TOTAL\s+([\d.,]+)/i) ||
+          txt.match(/R\$\s*([\d.,]+)/);
+        if (totalMatch) total = totalMatch[1];
 
-    const chaveMatch = txt.match(/chave de acesso:\s*([\d ]{30,})/i);
-    let chaveAcesso = "";
-    if (chaveMatch) chaveAcesso = chaveMatch[1].replace(/\s+/g, "");
+        let notaFiscal = "";
+        const nfMatch = txt.match(/NOTA FISCAL Nº?\s*([\d]+)/i);
+        if (nfMatch) notaFiscal = nfMatch[1];
 
-    let bandeiraTarifaria = "";
-    const bandMatch = txt.match(/Band\.\s*Tarif\.\s*:\s*([A-Za-zÀ-ú]+)/i);
-    if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
+        let chaveAcesso = "";
+        const chaveMatch = txt.match(/chave de acesso:\s*([\d\s]{30,})/i);
+        if (chaveMatch) chaveAcesso = chaveMatch[1].replace(/\s+/g, "");
 
-    let dataLeituraAnterior = "";
-    let dataLeituraAtual = "";
-    let numeroDias = "";
-    let consumoKwh = "";
+        let bandeiraTarifaria = "";
+        const bandMatch = txt.match(/Band\.?\s*Tarif\.?\s*:\s*([A-Za-zÀ-ú]+)/i);
+        if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
 
-    const leituraMatch = txt.match(
-      /(\d{2}\/\d{2}\/\d{4})\s+\d+\.\d+\s+(\d{2}\/\d{2}\/\d{4})\s+\d+\.\d+\s+\d+\.\d+\s+(\d+\.\d+)\s+(\d+)/i
-    );
+        let dataLeituraAnterior = "";
+        let dataLeituraAtual = "";
+        let numeroDias = "";
+        let consumoKwh = "";
 
-    if (leituraMatch) {
-      dataLeituraAnterior = leituraMatch[1];
-      dataLeituraAtual    = leituraMatch[2];
-      consumoKwh          = leituraMatch[3];
-      numeroDias          = leituraMatch[4];
-    }
+        const leituraMatch = txt.match(
+          /(\d{2}\/\d{2}\/\d{4})\s+\d+[.,]\d+\s+(\d{2}\/\d{2}\/\d{4})\s+\d+[.,]\d+\s+\d+[.,]\d+\s+(\d+[.,]\d+)\s+(\d+)/i
+        );
 
-    resultados.push({
-      pagina: idx + 1,
-      numCliente,
-      mesAno,
-      vencimento,
-      total,
-      bandeiraTarifaria,
-      dataLeituraAnterior,
-      dataLeituraAtual,
-      numeroDias,
-      consumoKwh,
-      chaveAcesso,
-      notaFiscal,
-      textoBruto: txt
+        if (leituraMatch) {
+          dataLeituraAnterior = leituraMatch[1];
+          dataLeituraAtual    = leituraMatch[2];
+          consumoKwh          = leituraMatch[3];
+          numeroDias          = leituraMatch[4];
+        }
+
+        if (!numCliente || !vencimento || !total) {
+          console.warn("❌ CE FALHOU NA VALIDAÇÃO", {
+            numCliente, mesAno, vencimento, total
+          });
+          console.groupEnd();
+          return;
+        }
+
+        console.log("✅ CE OK");
+
+        resultados.push({
+          pagina: idx + 1,
+          numCliente,
+          mesAno,
+          vencimento,
+          total,
+          bandeiraTarifaria,
+          dataLeituraAnterior,
+          dataLeituraAtual,
+          numeroDias,
+          consumoKwh,
+          chaveAcesso,
+          notaFiscal,
+          textoBruto: txt
+        });
+
+        console.groupEnd();
+        return;
+      }
+
+      console.groupEnd();
     });
-
-    return;
-  }
-
-});
 
     return resultados;
   }
@@ -1699,7 +1706,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
               </button>
 
               <!-- DEBUG -->
-              <!--
+              <!-- 
               <button
                 class="download-button"
                 type="button"
