@@ -2,8 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>ADM - EXTRUTURADOR DE FATURAS DE ENERGIA</title>
+  <title>ADM - ESTRUTURADOR DE FATURAS DE ENERGIA</title>
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/LOGO_PeD.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- pdf.js via CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -647,131 +650,523 @@
     }
 
     /* teu override final */
-    body {
-      background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+    :root {
+      --ink-strong: #0f172a;
+      --ink-soft: #4c6486;
+      --line-soft: rgba(30, 41, 59, 0.12);
+      --line-mid: rgba(30, 41, 59, 0.2);
+      --shadow-soft: 0 16px 34px rgba(15, 23, 42, 0.12);
+      --shadow-card: 0 26px 60px rgba(15, 23, 42, 0.16);
+      --radius-xl: 28px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
     }
-/* ===== Overlay de Progresso ===== */
-.progress-overlay{
-  position:fixed;
-  inset:0;
-  z-index:999999;
-  display:flex;
-  align-items:center;
-  justify-content:center;
 
-  /* fundo escuro + blur do que tá atrás */
-  background:rgba(0,0,0,.45);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
+    body {
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      color: var(--ink-strong);
+      background:
+        radial-gradient(circle at 9% 8%, rgba(59,130,246,0.17), transparent 34%),
+        radial-gradient(circle at 88% 10%, rgba(16,185,129,0.17), transparent 36%),
+        linear-gradient(145deg, #f8fafc 0%, #eef6ff 56%, #ecfeff 100%);
+      position: relative;
+      overflow-x: hidden;
+    }
 
-.progress-card{
-  width:min(520px, 92vw);
-  border-radius:18px;
-  padding:18px 18px 14px;
-  background:rgba(20,20,20,.82);
-  border:1px solid rgba(255,255,255,.12);
-  box-shadow:0 16px 40px rgba(0,0,0,.35);
-  color:#fff;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-}
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.17;
+      background-image: linear-gradient(rgba(148,163,184,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.16) 1px, transparent 1px);
+      background-size: 30px 30px;
+      mask-image: radial-gradient(circle at center, black 20%, transparent 90%);
+    }
 
-.progress-title{
-  font-size:16px;
-  font-weight:700;
-  letter-spacing:.2px;
-  margin-bottom:6px;
-}
+    .top-header,
+    .card,
+    #progressOverlay,
+    #loader {
+      position: relative;
+      z-index: 1;
+    }
 
-.progress-sub{
-  font-size:13px;
-  opacity:.9;
-  margin-bottom:12px;
-  line-height:1.3;
-  word-break: break-word;
-}
+    .top-header {
+      max-width: 1140px;
+      margin-top: 6px;
+      padding: 0 8px;
+    }
 
-.progress-bar-wrap{
-  width:100%;
-  height:12px;
-  border-radius:999px;
-  background:rgba(255,255,255,.12);
-  overflow:hidden;
-}
+    .header-logo {
+      width: min(290px, 58vw);
+      max-width: none;
+      filter: drop-shadow(0 14px 24px rgba(15, 23, 42, 0.16));
+    }
 
-.progress-bar{
-  height:100%;
-  width:0%;
-  border-radius:999px;
-  background:linear-gradient(90deg, rgba(62,180,255,1), rgba(0,255,170,1));
-  transition: width .18s ease;
-}
+    .card {
+      max-width: 1140px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line-soft);
+      background: linear-gradient(160deg, rgba(255,255,255,0.92) 0%, rgba(245,251,255,0.86) 55%, rgba(241,255,252,0.84) 100%);
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: clamp(18px, 2.5vw, 30px);
+      overflow: hidden;
+    }
 
-.progress-meta{
-  display:flex;
-  justify-content:space-between;
-  margin-top:10px;
-  font-size:12px;
-  opacity:.92;
-}
+    .card::before {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: clamp(22px, 4vw, 44px);
+      right: clamp(22px, 4vw, 44px);
+      height: 5px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #1d4ed8 0%, #0ea5a3 48%, #f59e0b 100%);
+    }
 
-.progress-hint{
-  margin-top:10px;
-  font-size:12px;
-  opacity:.85;
-}
-/* Botão Arquivos Tratados (Excel + PDF) */
-.download-treated{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:10px 16px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.18);
-  cursor:pointer;
+    h1 {
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      font-size: clamp(24px, 2.2vw, 34px);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: #0b1b36;
+      margin: 0;
+    }
 
-  /* mix Excel (verde) + PDF (vermelho) */
-  background: linear-gradient(90deg, rgba(0,150,90,.92), rgba(255,70,70,.92));
-  box-shadow: 0 8px 22px rgba(0,0,0,.22);
-  color:#fff;
+    p {
+      color: var(--ink-soft);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-top: 10px;
+      margin-bottom: 18px;
+    }
 
-  transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
-}
+    .tipo-fatura {
+      border: 1px solid rgba(30,64,175,0.2);
+      background: rgba(255,255,255,0.76);
+      border-radius: var(--radius-lg);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      color: #334155;
+      gap: 10px 14px;
+    }
 
-.download-treated:hover{
-  filter: brightness(1.03);
-  box-shadow: 0 12px 28px rgba(0,0,0,.28);
-  transform: translateY(-1px);
-}
+    .tipo-fatura span strong {
+      color: #143361;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
 
-.download-treated:active{
-  transform: translateY(0px) scale(.99);
-}
+    .tipo-option {
+      background: linear-gradient(120deg, #ffffff 0%, #f2f7ff 100%);
+      border: 1px solid rgba(30,64,175,0.22);
+      border-radius: 999px;
+      padding: 6px 10px;
+      box-shadow: 0 8px 18px rgba(30,64,175,0.12);
+    }
 
-.treated-icons{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:6px 8px;
-  border-radius:10px;
-  background: rgba(0,0,0,.18);
-  border: 1px solid rgba(255,255,255,.14);
-}
+    .tipo-option:hover {
+      transform: translateY(-1px);
+      border-color: rgba(14,116,144,0.42);
+      box-shadow: 0 12px 24px rgba(20,60,120,0.18);
+    }
 
-.treated-icon{
-  width:18px;
-  height:18px;
-  object-fit:contain;
-  display:block;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,.25));
-}
+    .tipo-option input[type="radio"] {
+      accent-color: #2563eb;
+    }
 
-.treated-text{
-  font-weight:700;
-  letter-spacing:.2px;
-  font-size:14px;
-  line-height:1;
-}
+    .step-hint {
+      gap: 8px;
+      font-size: 12px;
+      color: #3d5a83;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .step-bullet {
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid rgba(30,64,175,0.3);
+      background: #fff;
+      color: #1e3a8a;
+      box-shadow: 0 7px 16px rgba(37,99,235,0.15);
+    }
+
+    .step-arrow {
+      color: #1e3a8a;
+      font-weight: 800;
+    }
+
+    .pdf-row {
+      border: 1px solid rgba(30,64,175,0.2);
+      border-style: solid;
+      border-radius: var(--radius-md);
+      background: linear-gradient(140deg, rgba(255,255,255,0.95) 0%, rgba(240,247,255,0.92) 100%);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .pdf-name {
+      color: #173864;
+      font-weight: 600;
+    }
+
+    .pdf-row-hint {
+      color: #4a668f;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .action-row {
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    button {
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    }
+
+    .action-btn,
+    .download-button,
+    .side-button {
+      border-radius: 999px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      border: 1px solid var(--line-mid);
+      box-shadow: 0 14px 30px rgba(30,41,59,0.18);
+      transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+    }
+
+    .action-btn {
+      background: linear-gradient(120deg, #ffffff 0%, #edf3ff 100%);
+      color: #173463;
+      border-color: rgba(30,64,175,0.2);
+      padding: 11px 16px;
+    }
+
+    .action-btn.primary {
+      color: #fff;
+      border-color: rgba(37,99,235,0.45);
+      background: linear-gradient(100deg, #1d4ed8 0%, #0ea5a3 100%);
+    }
+
+    .action-btn.danger {
+      color: #fff;
+      border-color: rgba(225,29,72,0.45);
+      background: linear-gradient(100deg, #ef4444 0%, #be123c 100%);
+    }
+
+    .action-btn:hover,
+    .download-button:hover,
+    .side-button:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.03);
+      box-shadow: 0 18px 34px rgba(15,23,42,0.24);
+    }
+
+    .action-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 11px;
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.34);
+    }
+
+    .status {
+      color: #35527c;
+      font-size: 12px;
+      font-weight: 600;
+      min-height: 18px;
+    }
+
+    .result-layout {
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .success-panel {
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(30,64,175,0.2);
+      background:
+        radial-gradient(circle at 12% 10%, rgba(37,99,235,0.17) 0%, transparent 30%),
+        linear-gradient(145deg, rgba(255,255,255,0.96) 0%, rgba(240,250,255,0.94) 100%);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 18px 20px;
+      gap: 12px;
+    }
+
+    .success-title {
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      font-size: 16px;
+      color: #0d2a52;
+    }
+
+    .success-sub {
+      color: #375683;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .success-meta {
+      color: #4f6689;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .download-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      border: 1px solid rgba(20,70,105,0.35);
+      background: linear-gradient(105deg, #0f8f5f 0%, #0c879f 48%, #e14b50 100%);
+      color: #fff;
+      padding: 12px 16px;
+      min-height: 48px;
+    }
+
+    .download-treated {
+      border-radius: 14px;
+    }
+
+    .treated-icons {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 9px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.16);
+      flex-shrink: 0;
+    }
+
+    .treated-icon {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .treated-text {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+
+    .side-buttons {
+      flex: 0 0 300px;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(15,23,42,0.18);
+      background: linear-gradient(155deg, rgba(15,23,42,0.9) 0%, rgba(30,58,138,0.88) 56%, rgba(15,118,110,0.86) 100%);
+      box-shadow: 0 20px 40px rgba(15,23,42,0.24);
+      padding: 16px;
+      gap: 10px;
+    }
+
+    .side-title {
+      color: #f8fafc;
+      letter-spacing: 0.06em;
+    }
+
+    .side-desc,
+    .dist-label {
+      color: rgba(241,245,249,0.88);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .dist-block {
+      border: 1px dashed rgba(226,232,240,0.46);
+      background: rgba(15,23,42,0.3);
+      border-radius: 12px;
+    }
+
+    .side-button {
+      border-radius: 12px;
+      background: linear-gradient(100deg, #1d4ed8 0%, #38bdf8 100%);
+      border: 1px solid rgba(191,219,254,0.5);
+    }
+
+    .panel-button {
+      color: #261c03;
+      border-color: rgba(253,224,71,0.55);
+      background: linear-gradient(100deg, #fcd34d 0%, #f59e0b 100%);
+    }
+
+    .support-info {
+      color: #4b6387;
+      align-items: flex-start;
+      text-align: left;
+      font-size: 12px;
+      margin-top: 18px;
+    }
+
+    .support-info span strong {
+      color: #173665;
+    }
+
+    #loader {
+      background:
+        radial-gradient(circle at 15% 10%, rgba(37,99,235,0.22), transparent 34%),
+        radial-gradient(circle at 85% 10%, rgba(16,185,129,0.2), transparent 34%),
+        linear-gradient(145deg, #f8fbff 0%, #f0f9ff 100%);
+      transition: opacity .38s ease, visibility .38s ease, transform .38s ease;
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+      animation: none;
+    }
+
+    #loader.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: scale(1.015);
+    }
+
+    #loader-logo {
+      width: min(260px, 62vw);
+      filter: drop-shadow(0 14px 24px rgba(30,64,175,0.2));
+      animation: logoBreathe 2.6s ease-in-out infinite;
+    }
+
+    .loader-text {
+      color: #193b71;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      font-size: 12px;
+      letter-spacing: .14em;
+      font-weight: 700;
+    }
+
+    .loader-bar {
+      width: min(260px, 70vw);
+      height: 5px;
+      background: rgba(30,64,175,0.16);
+    }
+
+    .loader-bar-inner {
+      width: 42%;
+      background: linear-gradient(90deg, #1d4ed8, #14b8a6, #22c55e);
+      animation: loaderRun 1.35s ease-in-out infinite;
+    }
+
+    .result-loader {
+      border-radius: 14px;
+      border: 1px dashed rgba(30,64,175,0.35);
+      background: linear-gradient(145deg, rgba(255,255,255,0.92) 0%, rgba(240,249,255,0.9) 100%);
+    }
+
+    .result-loader-text {
+      color: #244676;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .result-loader-bar {
+      background: rgba(37,99,235,0.16);
+    }
+
+    .result-loader-bar-inner {
+      background: linear-gradient(90deg, #2563eb, #14b8a6, #22c55e);
+      animation: loaderRun 1.15s ease-in-out infinite;
+    }
+
+    .progress-overlay{
+      background: rgba(15,23,42,.32);
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+    }
+
+    .progress-card{
+      width:min(560px, 92vw);
+      border-radius:20px;
+      padding:18px 18px 14px;
+      background: linear-gradient(145deg, rgba(255,255,255,.96) 0%, rgba(239,246,255,.94) 100%);
+      border:1px solid rgba(148,163,184,.38);
+      box-shadow:0 26px 54px rgba(15,23,42,.26);
+      color:#0f2447;
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    }
+
+    .progress-title{
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      font-size:16px;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+
+    .progress-sub{
+      font-size:13px;
+      color:#435d84;
+      margin-bottom:12px;
+      line-height:1.4;
+      word-break: break-word;
+    }
+
+    .progress-bar-wrap{
+      width:100%;
+      height:12px;
+      border-radius:999px;
+      background: rgba(30,64,175,.2);
+      overflow:hidden;
+    }
+
+    .progress-bar{
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background: linear-gradient(90deg, #2563eb, #14b8a6);
+      transition: width .18s ease;
+    }
+
+    .progress-meta{
+      display:flex;
+      justify-content:space-between;
+      margin-top:10px;
+      font-size:12px;
+      color:#304d78;
+      font-weight:700;
+    }
+
+    .progress-hint{
+      margin-top:10px;
+      font-size:12px;
+      color:#425d86;
+      line-height: 1.4;
+    }
+
+    @keyframes loaderRun {
+      0% { transform: translateX(-112%); }
+      100% { transform: translateX(260%); }
+    }
+
+    @keyframes logoBreathe {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+
+    @media (max-width: 1080px) {
+      .result-layout { flex-direction: column; }
+      .side-buttons { flex: 1 1 auto; }
+    }
+
+    @media (max-width: 680px) {
+      body { padding: 14px 10px 24px; }
+      .card { border-radius: 20px; padding: 16px 12px 14px; }
+      h1 { font-size: 22px; }
+      .action-row { flex-direction: column; align-items: stretch; }
+      .action-btn, .download-button { width: 100%; justify-content: center; }
+      .side-buttons { border-radius: 14px; padding: 13px; }
+      .support-info { font-size: 11px; }
+    }
+
 
   </style>
 
@@ -952,9 +1347,14 @@
       // ⚠️ CORREÇÃO: SP só entra se NÃO for CE
       if (isSP && !isCE) {
 
-        let numCliente = "";
+        let instalacao = "";
+        let nCliente = "";
 
         let mUC = txt.match(/^\s*(\d{8,12})\s*\/\s*(\d{6,14})\b/);
+        if (mUC) {
+          instalacao = mUC[1];
+          nCliente = mUC[2];
+        }
 
         if (!mUC) {
           mUC = txt.match(/\bINSC\.?\s*EST:\s*(?:ISENTO|\d+)\s+(\d{7,12})\s+R\$\s*[\d.,]+/i);
@@ -964,7 +1364,8 @@
           mUC = txt.match(/\b(\d{7,12})\s+R\$\s*[\d.,]+/i);
         }
 
-        if (mUC) numCliente = mUC[1];
+        if (!instalacao && mUC) instalacao = mUC[1];
+        if (!nCliente) nCliente = instalacao;
 
         let mesAno = "";
         let vencimento = "";
@@ -993,7 +1394,7 @@
         if (chaveNum) chaveAcesso = chaveNum[1].replace(/\s+/g, "");
 
         let bandeiraTarifaria = "";
-        const bandMatch = txt.match(/Bandeira\(s\)[^:]*:\s*([A-Za-zÀ-ú ]{3,})/i);
+        const bandMatch = txt.match(/Bandeira\(s\)[^:]*:\s*([\p{L} ]{3,})/iu);
         if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
 
         let dataLeituraAnterior = "";
@@ -1010,9 +1411,9 @@
         const enrg = txt.match(/ENRG\s*ATV[ÚU]NICO\s+([\d.,]+)/i);
         if (enrg) consumoKwh = enrg[1];
 
-        if (!numCliente || !mesAno || !vencimento || !total) {
+        if (!instalacao || !mesAno || !vencimento || !total) {
           console.warn("❌ SP FALHOU NA VALIDAÇÃO", {
-            numCliente, mesAno, vencimento, total
+            instalacao, mesAno, vencimento, total
           });
           console.groupEnd();
           return;
@@ -1022,7 +1423,8 @@
 
         resultados.push({
           pagina: idx + 1,
-          numCliente,
+          instalacao,
+          nCliente,
           mesAno,
           vencimento,
           total,
@@ -1045,13 +1447,21 @@
       // ==========================
       if (isCE) {
 
-        let numCliente = "";
+        let instalacao = "";
+        let nCliente = "";
+
+        const matchInscCliente = txt.match(/INSC\.?\s*EST:?\s*(\d{6,})\s+(\d{6,})\b/i);
+        if (matchInscCliente) {
+          instalacao = matchInscCliente[1];
+          nCliente = matchInscCliente[2];
+        }
 
         const ucMatch =
           txt.match(/INSC\.?\s*EST:?\s*([\d]{6,})/i) ||
           txt.match(/\bNO DO CLIENTE\b[\s\S]{0,80}?(\d{6,})/i);
 
-        if (ucMatch) numCliente = ucMatch[1];
+        if (!instalacao && ucMatch) instalacao = ucMatch[1];
+        if (!nCliente) nCliente = instalacao;
 
         let mesAno = "";
         const mesAnoMatch = txt.match(/\b(\d{2}\/\d{4})\b/);
@@ -1079,7 +1489,7 @@
         if (chaveMatch) chaveAcesso = chaveMatch[1].replace(/\s+/g, "");
 
         let bandeiraTarifaria = "";
-        const bandMatch = txt.match(/Band\.?\s*Tarif\.?\s*:\s*([A-Za-zÀ-ú]+)/i);
+        const bandMatch = txt.match(/Band\.?\s*Tarif\.?\s*:\s*([\p{L}]+)/iu);
         if (bandMatch) bandeiraTarifaria = bandMatch[1].trim();
 
         let dataLeituraAnterior = "";
@@ -1098,9 +1508,9 @@
           numeroDias          = leituraMatch[4];
         }
 
-        if (!numCliente || !vencimento || !total) {
+        if (!instalacao || !vencimento || !total) {
           console.warn("❌ CE FALHOU NA VALIDAÇÃO", {
-            numCliente, mesAno, vencimento, total
+            instalacao, mesAno, vencimento, total
           });
           console.groupEnd();
           return;
@@ -1110,7 +1520,8 @@
 
         resultados.push({
           pagina: idx + 1,
-          numCliente,
+          instalacao,
+          nCliente,
           mesAno,
           vencimento,
           total,
@@ -1134,16 +1545,51 @@
     return resultados;
   }
 
-  function hideGlobalLoader() {
+  function hideGlobalLoader(force = false) {
     const loader = document.getElementById("loader");
-    if (loader) loader.style.display = "none";
+    if (!loader || loader.dataset.hidden === "1") return;
+
+    const minVisibleMs = 2200;
+    const startedAt = Number(loader.dataset.startedAt || Date.now());
+    const elapsed = Date.now() - startedAt;
+    const wait = force ? 0 : Math.max(0, minVisibleMs - elapsed);
+
+    setTimeout(() => {
+      if (loader.dataset.hidden === "1") return;
+      loader.dataset.hidden = "1";
+      loader.classList.add("is-hidden");
+      setTimeout(() => {
+        loader.style.display = "none";
+      }, 420);
+    }, wait);
   }
 
-  window.addEventListener("load", () => {
-    setTimeout(hideGlobalLoader, 5000);
+  let uiBooted = false;
+  function bootUI() {
+    if (uiBooted) return;
+    uiBooted = true;
     updateTipoUI();
     renderPdfList();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const loader = document.getElementById("loader");
+    if (loader && !loader.dataset.startedAt) {
+      loader.dataset.startedAt = String(Date.now());
+    }
+    bootUI();
+    hideGlobalLoader(false);
   });
+
+  window.addEventListener("load", () => {
+    bootUI();
+    hideGlobalLoader(false);
+  });
+
+  setTimeout(() => {
+    bootUI();
+    hideGlobalLoader(true);
+  }, 12000);
 
   function setTipo(tipo) {
     currentTipo = tipo;
@@ -1333,10 +1779,10 @@ async function downloadArquivosTratados() {
     return m ? `${m[1]}.${m[2]}` : "00.00";
   };
 
-const makePdfName = (uc, nf, venc, idx) => {
+const makePdfName = (instalacao, nf, venc, idx) => {
   const partes = [];
 
-  if (uc) partes.push(`UC ${uc}`);
+  if (instalacao) partes.push(`INSTALACAO ${instalacao}`);
 
   const data = fmtVencDDMM(venc);
   if (data !== "00.00") partes.push(data);
@@ -1417,7 +1863,8 @@ const makePdfName = (uc, nf, venc, idx) => {
 
     const rows = faturas.map(f => [
       f.pagina,
-      f.numCliente,
+      f.instalacao,
+      f.nCliente,
       f.mesAno,
       f.vencimento,
       f.total,
@@ -1439,7 +1886,8 @@ const makePdfName = (uc, nf, venc, idx) => {
       style: { theme: "TableStyleMedium2", showRowStripes: true },
       columns: [
         { name: "PAGINA" },
-        { name: "NUM_CLIENTE" },
+        { name: "INSTALACAO" },
+        { name: "N_CLIENTE" },
         { name: "MES_ANO" },
         { name: "VENCIMENTO" },
         { name: "TOTAL" },
@@ -1491,7 +1939,7 @@ const makePdfName = (uc, nf, venc, idx) => {
 // 5) PDFs originais renomeados
 // Regra: só baixar PDFs que tenham EXATAMENTE 1 fatura
 // =============================
-status.textContent = "Baixando PDFs originais (somente faturas únicas)...";
+status.textContent = "Baixando PDFs originais (somente faturas unicas)...";
 
 for (let i = 0; i < pdfBuffers.length; i++) {
   const original = pdfBuffers[i];
@@ -1503,7 +1951,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
   // ❌ mais de uma fatura no mesmo PDF → não baixar
   if (list.length > 1) {
     console.warn(
-      `[IGNORADO] PDF com múltiplas faturas (${list.length}):`,
+      `[IGNORADO] PDF com multiplas faturas (${list.length}):`,
       original.name
     );
     continue;
@@ -1512,7 +1960,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
   // ✅ exatamente 1 fatura → baixar
   const f = list[0];
   const novoNome = makePdfName(
-  f.numCliente,
+  f.instalacao,
   f.notaFiscal,
   f.vencimento,
   1
@@ -1527,11 +1975,11 @@ for (let i = 0; i < pdfBuffers.length; i++) {
 }
 
     status.textContent = "Downloads iniciados com sucesso.";
-    if (hasOverlay) hideProgressOverlay("Concluído! ✅");
+    if (hasOverlay) hideProgressOverlay("Concluido! OK");
   } catch (e) {
     console.error(e);
     status.textContent = "Erro ao baixar arquivos tratados.";
-    if (hasOverlay) hideProgressOverlay("Deu erro. ❌");
+    if (hasOverlay) hideProgressOverlay("Deu erro. Falha");
     alert("Deu erro ao gerar/baixar os arquivos. Veja o console (F12).");
   }
 }
@@ -1540,7 +1988,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
   function openFormAtual() {
     const cfg = TIPO_CONFIG[currentTipo];
     if (!cfg.formUrl) {
-      alert("Formulário não configurado para este tipo de fatura.");
+      alert("Formulario nao configurado para este tipo de fatura.");
       return;
     }
     window.open(cfg.formUrl, "_blank");
@@ -1562,7 +2010,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
       src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo.png"
       alt="Logo"
     >
-    <div class="loader-text">Carregando Extruturador de Faturas de Energia...</div>
+    <div class="loader-text">Carregando Estruturador de Faturas de Energia...</div>
     <div class="loader-bar">
       <div class="loader-bar-inner"></div>
     </div>
@@ -1580,9 +2028,9 @@ for (let i = 0; i < pdfBuffers.length; i++) {
   </div>
 
   <div class="card">
-    <h1>EXTRUTURADOR DE FATURAS DE ENERGIA - MOBIT</h1>
+    <h1>ESTRUTURADOR DE FATURAS DE ENERGIA - MOBIT</h1>
 
-    <p>Escolha a concessionária, selecione os PDFs e gere o arquivo Excel.</p>
+    <p>Escolha a concession&aacute;ria, selecione os PDFs e gere o arquivo Excel.</p>
 
     <!-- Seletor de tipo de fatura -->
     <div class="tipo-fatura">
@@ -1614,17 +2062,17 @@ for (let i = 0; i < pdfBuffers.length; i++) {
     <!-- Passo 1 -->
     <div class="step-hint">
       <div class="step-bullet">1</div>
-      <span><span class="step-arrow">➜</span> Selecione 1 ou mais PDFs da fatura (de uma vez).</span>
+      <span><span class="step-arrow">&rarr;</span> Selecione 1 ou mais PDFs da fatura (de uma vez).</span>
     </div>
 
-    <!-- input multi (invisível) -->
+    <!-- input multi (invis?vel) -->
     <input id="pdfPicker" type="file" accept="application/pdf" multiple style="display:none" onchange="onFilesSelected(this)" />
 
     <!-- Lista de PDFs -->
     <div id="pdfList" style="margin-top:6px;"></div>
-    <div class="pdf-row-hint">Dica: clique em “Selecionar PDFs” e escolha vários de uma vez.</div>
+    <div class="pdf-row-hint">Dica: clique em "Selecionar PDFs" e escolha v&aacute;rios de uma vez.</div>
 
-    <!-- Botões -->
+    <!-- Bot?es -->
     <div class="action-row">
       <button type="button" class="action-btn" onclick="pickPdfs()">
         <span class="action-icon">+</span>
@@ -1632,7 +2080,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
       </button>
 
       <button type="button" class="action-btn danger" onclick="clearAllPdfs()">
-        <span class="action-icon">×</span>
+        <span class="action-icon">?</span>
         <span>Limpar lista</span>
       </button>
     </div>
@@ -1644,12 +2092,12 @@ for (let i = 0; i < pdfBuffers.length; i++) {
     <!-- Passo 2 -->
     <div class="step-hint" style="margin-top:10px;">
       <div class="step-bullet">2</div>
-      <span><span class="step-arrow">➜</span> Clique em <strong>"Converter"</strong>.</span>
+      <span><span class="step-arrow">&rarr;</span> Clique em <strong>"Converter"</strong>.</span>
     </div>
 
     <button id="convertButton" class="action-btn primary" style="margin-top:8px;" onclick="handleFileChange()">
       <span class="action-icon">
-        <img src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/PDF_TO_EXCEL.png" alt="Converter" onerror="this.parentElement.textContent='▶';" />
+        <img src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/PDF_TO_EXCEL.png" alt="Converter" onerror="this.parentElement.textContent='?';" />
       </span>
       <span>Converter PDF para Excel estruturado</span>
     </button>
@@ -1665,11 +2113,11 @@ for (let i = 0; i < pdfBuffers.length; i++) {
         </div>
       </div>
 
-      <!-- Conteúdo final -->
+      <!-- Conte?do final -->
       <div class="step-hint">
         <div class="step-bullet">3</div>
         <span>
-          <span class="step-arrow">➜</span>
+          <span class="step-arrow">&rarr;</span>
           Baixe o Excel estruturado, o PDF mesclado e Registre ao lado.
         </span>
       </div>
@@ -1680,19 +2128,19 @@ for (let i = 0; i < pdfBuffers.length; i++) {
           <div class="main-output">
             <div class="success-panel">
               <div class="success-header">
-                <div class="success-badge">✓</div>
+                <div class="success-badge">&#10003;</div>
                 <div>
                   <div class="success-title">PDF processado com sucesso</div>
                   <div class="success-sub">
-                    <span id="pageCountSpan">0</span> página(s) detectadas •
+                    <span id="pageCountSpan">0</span> p&aacute;gina(s) detectadas ?
                     Tipo: <span id="tipoNomeSpan">Enel</span>
                   </div>
                 </div>
               </div>
 
               <div class="success-meta">
-                Gere um arquivo Excel pronto para registrar no Form ao lado. O arquivo será processado no Power Automate para Power BI estruturada
-                de acordo com a concessionária selecionada.
+                Gere um arquivo Excel pronto para registrar no Form ao lado. O arquivo ser&aacute; processado no Power Automate para Power BI estruturada
+                de acordo com a concession&aacute;ria selecionada.
               </div>
 
               <button class="download-button download-treated" type="button" onclick="downloadArquivosTratados()">
@@ -1723,7 +2171,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
           <div class="side-buttons">
             <div class="side-title">Registrar fatura</div>
             <div class="side-desc">
-              Após gerar o Excel ou ler os dados, use o botão abaixo para abrir o formulário da concessionária.
+              Ap?s gerar o Excel ou ler os dados, use o bot?o abaixo para abrir o formul?rio da concession?ria.
             </div>
 
             <div class="dist-block">
@@ -1732,7 +2180,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
                   id="distLogo"
                   class="dist-logo"
                   src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png"
-                  alt="Logo da concessionária"
+                  alt="Logo da concession&aacute;ria"
                 />
               </div>
               <div id="distLabel" class="dist-label">
@@ -1755,7 +2203,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
               Painel de acompanhamento
             </div>
             <div class="side-desc">
-              Consulte o histórico das faturas registradas.
+              Consulte o hist&oacute;rico das faturas registradas.
             </div>
 
             <button
@@ -1800,41 +2248,9 @@ for (let i = 0; i < pdfBuffers.length; i++) {
     </div>
 
     <div class="progress-hint">
-      Se o navegador pedir permissão para múltiplos downloads, clique em <b>Permitir</b>.
+      Se o navegador pedir permiss&atilde;o para m&uacute;ltiplos downloads, clique em <b>Permitir</b>.
     </div>
   </div>
 </div>
-
-  <script>
-    document.addEventListener('contextmenu', e => e.preventDefault());
-
-    document.addEventListener('keydown', e => {
-      const k = (e.key || '').toUpperCase();
-      if (
-        e.key === 'F12' ||
-        (e.ctrlKey && k === 'U') ||
-        (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(k))
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }
-    }, true);
-
-    (function(){
-      let trips = 0;
-      setInterval(() => {
-        const t0 = performance.now();
-        debugger;
-        const dt = performance.now() - t0;
-        if (dt > 120) {
-          trips++;
-          if (trips >= 2) document.documentElement.innerHTML = "";
-        } else {
-          trips = Math.max(0, trips - 1);
-        }
-      }, 700);
-    })();
-  </script>
 </body>
 </html>
