@@ -3,29 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Unificador CSV</title>
+<title>BI - UNIFICADOR CSV</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --surface2: #1a1a24;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(255,255,255,0.14);
-    --accent: #00e5a0;
-    --accent2: #00b37d;
-    --accent-dim: rgba(0,229,160,0.08);
-    --accent-glow: rgba(0,229,160,0.2);
-    --text: #f0f0f8;
-    --muted: #7070a0;
-    --danger: #ff5060;
-    --warn: #ffb020;
-    --mono: 'DM Mono', monospace;
-    --sans: 'Sora', sans-serif;
-  }
+:root {
+  --bg: #001B44;
+  --surface: #002D73;
+  --surface2: #003B95;
+
+  --border: rgba(255, 196, 37, 0.16);
+  --border2: rgba(255, 196, 37, 0.34);
+
+  --accent: #FFC425;
+  --accent2: #F2B705;
+  --accent-dim: rgba(255, 196, 37, 0.10);
+  --accent-glow: rgba(255, 196, 37, 0.28);
+
+  --text: #F8FAFC;
+  --muted: #B8C7E6;
+
+  --danger: #ff5060;
+  --warn: #ffb020;
+
+  --mono: 'DM Mono', monospace;
+  --sans: 'Sora', sans-serif;
+}
 
   body {
     font-family: var(--sans);
@@ -256,11 +262,16 @@
 
   .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
 
-  .btn-primary {
-    background: var(--accent); color: #050f09;
-  }
+.btn-primary {
+  background: var(--accent);
+  color: #002D73;
+  box-shadow: 0 10px 26px rgba(255, 196, 37, 0.22);
+}
 
-  .btn-primary:hover { background: #00ffb3; transform: translateY(-1px); }
+.btn-primary:hover {
+  background: #FFD45A;
+  transform: translateY(-1px);
+}
   .btn-primary:active { transform: translateY(0); }
   .btn-primary:disabled {
     background: var(--surface2); color: var(--muted);
@@ -302,10 +313,64 @@
   .log-content .er { color: var(--danger); }
   .log-content .wn { color: var(--warn); }
 
-  footer {
-    margin-top: 3rem; text-align: center;
-    font-size: 0.7rem; color: var(--muted); line-height: 1.6;
-  }
+.mobit-footer {
+  margin-top: 3rem;
+
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+
+  background: #020617;
+  border-top: 1px solid rgba(255,196,37,0.18);
+  padding: 24px 0;
+  box-shadow: 0 -18px 40px rgba(0,0,0,0.18);
+}
+
+.footer-signature {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.signature-main {
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.signature-logo {
+  width: 120px;
+  height: auto;
+  max-height: 96px;
+  object-fit: contain;
+  align-self: center;
+}
+
+.signature-text {
+  text-align: left;
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.signature-text strong {
+  display: block;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.signature-emails {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.signature-bottom {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
 /* ===== LOADER GLOBAL ===== */
 #loader {
   position: fixed;
@@ -359,6 +424,68 @@
     .options-row { flex-direction: column; }
     .actions { flex-direction: column; }
   }
+footer {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+.footer-container {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.footer-brand {
+  flex-shrink: 0;
+}
+
+.footer-logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  filter: brightness(1.1);
+}
+
+.footer-info {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.footer-title {
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.footer-title strong {
+  color: var(--accent);
+}
+
+.footer-contacts {
+  margin-bottom: 8px;
+}
+
+.footer-company {
+  margin-bottom: 4px;
+}
+
+.footer-address {
+  font-size: 0.68rem;
+  opacity: 0.8;
+}
+.logo-icon {
+  color: var(--accent);
+  box-shadow: 0 0 24px rgba(255, 196, 37, 0.16);
+}
+
+.drop-icon svg,
+.file-item-icon svg {
+  stroke: var(--accent);
+}
 </style>
 </head>
 <body>
@@ -379,7 +506,7 @@
   <header>
     <div class="logo-area">
       <div class="logo-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#00e5a0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="8" y1="13" x2="16" y2="13"/>
@@ -392,7 +519,7 @@
         <div class="tagline">Merge múltiplos arquivos CSV no navegador</div>
       </div>
     </div>
-    <div class="badge">v2.0 · 100% local</div>
+    <div class="badge">v1.0 · 100% local</div>
   </header>
 
   <div class="drop-zone" id="dropZone">
@@ -496,9 +623,33 @@
     <div class="log-content" id="logContent"></div>
   </div>
 
-  <footer>
-    Processamento 100% no navegador · Nenhum arquivo enviado para servidores · Dados ficam no seu computador
-  </footer>
+<footer class="mobit-footer">
+  <div class="footer-signature">
+    <div class="signature-main">
+      <img 
+  src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo.png"
+  alt="Mobit Business Intelligence"
+  class="signature-logo"
+>
+
+      <div class="signature-text">
+        <div>Atenciosamente,</div>
+        <strong>Time Power BI</strong>
+
+        <div class="signature-emails">
+          <div>📧 josereboucas@mobit.com.br</div>
+          <div>📧 paulosilva@mobit.com.br</div>
+          <div>📧 jorgeluis@mobitbrasil.com.br</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="signature-bottom">
+      <div>Tecnologia da Informação | Mobit - Mobilidade, Iluminação e Tecnologia Ltda</div>
+      <div>Endereço: Rodovia BR116, KM 09, 10000 - Jangurussu, Fortaleza - CE</div>
+    </div>
+  </div>
+</footer>
 </div>
 
 <script>
