@@ -9,6 +9,9 @@
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100%;
+}
 
 :root {
   --bg: #001B44;
@@ -33,16 +36,16 @@
   --sans: 'Sora', sans-serif;
 }
 
-  body {
-    font-family: var(--sans);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 2rem 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
   .noise {
     position: fixed; inset: 0; pointer-events: none; z-index: 0;
@@ -317,12 +320,15 @@
   margin-top: 3rem;
 
   width: 100vw;
-  margin-left: calc(50% - 50vw);
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
 
   background: #020617;
   border-top: 1px solid rgba(255,196,37,0.18);
-  padding: 24px 0;
-  box-shadow: 0 -18px 40px rgba(0,0,0,0.18);
+
+  padding: 28px 0;
+  min-height: calc(100vh - 560px);
 }
 
 .footer-signature {
