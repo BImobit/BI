@@ -1168,6 +1168,163 @@
     }
 
 
+    /* ============================================================
+       REPAGINADA - Tema Claro Corporativo + SVGs (camada final)
+       Vem por ultimo: sobrepoe o tema anterior mantendo classes/IDs.
+       ============================================================ */
+    :root{
+      --r-bg:#eef2f8; --r-surface:#ffffff; --r-surface-2:#f7f9fd;
+      --r-ink:#0f1d33; --r-ink-2:#52617a; --r-ink-3:#8a97ad;
+      --r-line:#e2e8f1; --r-line-strong:#cdd6e4;
+      --r-brand:#1456d8; --r-brand-dark:#0f3fa6; --r-brand-tint:#eaf1ff;
+      --r-danger:#dc2626; --r-success:#16a34a;
+      --r-shadow-sm:0 1px 2px rgba(15,29,51,.06), 0 1px 3px rgba(15,29,51,.04);
+      --r-shadow-md:0 4px 12px rgba(15,29,51,.08), 0 2px 4px rgba(15,29,51,.04);
+      --r-shadow-lg:0 18px 40px rgba(15,29,51,.14);
+    }
+
+    body{
+      background-color:var(--r-bg) !important;
+      background-image:
+        radial-gradient(circle at 4% -2%, rgba(20,86,216,.07), transparent 26%),
+        radial-gradient(circle at 100% 102%, rgba(22,163,74,.07), transparent 26%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Ccircle cx='2' cy='2' r='1.3' fill='%23ccd6e6'/%3E%3C/svg%3E") !important;
+      background-attachment:fixed, fixed, fixed;
+      color:var(--r-ink);
+    }
+    body::before{ display:none !important; content:none !important; }
+
+    .card{
+      background:var(--r-surface);
+      border:1px solid var(--r-line);
+      box-shadow:var(--r-shadow-md);
+      backdrop-filter:none; -webkit-backdrop-filter:none;
+    }
+    .card::before{ display:none !important; }
+
+    h1{ color:var(--r-ink); display:flex; align-items:center; gap:12px; }
+    p{ color:var(--r-ink-2); }
+    .status{ color:var(--r-ink-2); }
+
+    .step-bullet{ background:var(--r-brand); color:#fff; border:none; box-shadow:none; }
+    .step-arrow{ color:var(--r-brand); }
+    .step-hint{ color:var(--r-ink-2); }
+
+    .tipo-fatura{ background:var(--r-surface-2); border:1px solid var(--r-line); box-shadow:none; flex-wrap:nowrap; overflow-x:auto; gap:8px; }
+    .tipo-fatura span strong{ color:var(--r-ink); white-space:nowrap; }
+    .tipo-option{ flex:0 0 auto; background:var(--r-surface); border:1.5px solid var(--r-line-strong); box-shadow:none; border-radius:10px; padding:6px 10px; }
+    .tipo-option:hover{ border-color:var(--r-brand); transform:none; box-shadow:none; }
+    .tipo-option:has(input:checked){ border-color:var(--r-brand); background:var(--r-brand-tint); box-shadow:0 0 0 3px rgba(20,86,216,.12); }
+    .tipo-option input[type="radio"]{ accent-color:var(--r-brand); }
+    .tipo-option-logo{ width:auto; height:26px; max-width:104px; object-fit:contain; }
+    .tipo-option-label{ font-size:13px; font-weight:700; color:var(--r-ink); white-space:nowrap; }
+    /* Concessionaria ainda nao liberada */
+    .tipo-option.is-disabled{ opacity:.4; cursor:not-allowed; filter:grayscale(.5); }
+    .tipo-option.is-disabled:hover{ border-color:var(--r-line-strong); transform:none; box-shadow:none; }
+
+    .pdf-row{ background:var(--r-surface-2); border:1px solid var(--r-line); box-shadow:none; }
+    .pdf-logo-box{ background:var(--r-brand-tint); border:1px solid var(--r-line); }
+    .pdf-name{ color:var(--r-ink); }
+    .pdf-row-hint{ color:var(--r-ink-3); }
+    .pdf-actions button{ background:#fff; color:var(--r-danger); border:1px solid #f3c4c4; }
+
+    .action-btn,.download-button,.side-button{ border-radius:10px; box-shadow:var(--r-shadow-sm); }
+    .action-btn{ background:var(--r-surface); color:var(--r-ink); border:1px solid var(--r-line-strong); }
+    .action-btn:hover{ transform:translateY(-1px); filter:none; background:var(--r-surface-2); box-shadow:var(--r-shadow-md); }
+    .action-btn.primary{ background:var(--r-brand); color:#fff; border-color:var(--r-brand); }
+    .action-btn.primary:hover{ background:var(--r-brand-dark); }
+    .action-btn.danger{ background:#fff; color:var(--r-danger); border-color:#f3c4c4; }
+    .action-btn.danger:hover{ background:#fef2f2; }
+    .action-icon{ width:28px; height:28px; border-radius:9px; }
+    .action-btn:not(.primary):not(.danger) .action-icon{ background:var(--r-brand-tint); border-color:transparent; color:var(--r-brand); }
+    .action-btn.primary .action-icon{ background:rgba(255,255,255,.20); border-color:rgba(255,255,255,.28); color:#fff; }
+    .action-btn.danger .action-icon{ background:#fdecec; border-color:transparent; color:var(--r-danger); }
+
+    .success-panel{ background:var(--r-surface); border:1px solid var(--r-line); box-shadow:var(--r-shadow-sm); }
+    .success-badge{ background:var(--r-success); box-shadow:none; animation:none; color:#fff; }
+    .success-title{ color:var(--r-ink); }
+    .success-sub{ color:var(--r-ink-2); }
+    .success-meta{ color:var(--r-ink-2); }
+
+    .download-button{ background:var(--r-brand); border:1px solid var(--r-brand); color:#fff; }
+    .download-button:hover{ background:var(--r-brand-dark); filter:none; }
+    .treated-icons{ background:rgba(255,255,255,.20); border:1px solid rgba(255,255,255,.28); }
+
+    .side-buttons{ background:var(--r-surface-2); border:1px solid var(--r-line); box-shadow:none; }
+    .side-title{ color:var(--r-ink); }
+    .side-desc,.dist-label{ color:var(--r-ink-2); }
+    .dist-block{ background:var(--r-surface); border:1px solid var(--r-line); }
+    .side-button{ background:var(--r-brand); color:#fff; border:1px solid var(--r-brand); }
+    .side-button:hover{ background:var(--r-brand-dark); transform:translateY(-1px); filter:none; }
+    .panel-button{ background:#fff; color:var(--r-ink); border:1px solid var(--r-line-strong); }
+    .panel-button:hover{ background:var(--r-surface-2); }
+    .side-separator{ border-top:1px solid var(--r-line); }
+
+    .support-info{ color:var(--r-ink-3); }
+    .support-info span strong{ color:var(--r-ink-2); }
+
+    #loader{ background:var(--r-bg); }
+    .loader-text{ color:var(--r-ink-2); }
+    .loader-bar,.result-loader-bar{ background:var(--r-line); }
+    .loader-bar-inner,.result-loader-bar-inner{ background:var(--r-brand); }
+    .result-loader{ background:var(--r-surface-2); border:1px dashed var(--r-line-strong); }
+    .result-loader-text{ color:var(--r-ink); }
+
+    .progress-card{ background:var(--r-surface); border:1px solid var(--r-line); box-shadow:var(--r-shadow-lg); color:var(--r-ink); }
+    .progress-sub,.progress-meta,.progress-hint{ color:var(--r-ink-2); }
+    .progress-bar-wrap{ background:var(--r-line); }
+    .progress-bar{ background:var(--r-brand); }
+
+    /* ===== Decoracao SVG espalhada pela pagina ===== */
+    .bg-deco{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+    .bg-deco svg{ position:absolute; display:block; }
+    .bg-deco .d-bolt-1{ top:96px; left:-28px; width:150px; color:var(--r-brand); opacity:.06; }
+    .bg-deco .d-bolt-2{ bottom:64px; right:-24px; width:172px; color:var(--r-brand); opacity:.05; transform:rotate(12deg); }
+    .bg-deco .d-ring-1{ top:44px; right:7%; width:120px; color:var(--r-brand); opacity:.07; }
+    .bg-deco .d-ring-2{ bottom:13%; left:5%; width:92px; color:var(--r-success); opacity:.07; }
+    .bg-deco .d-wave-1{ top:33%; left:-44px; width:230px; color:var(--r-brand); opacity:.06; }
+    .bg-deco .d-wave-2{ bottom:27%; right:-34px; width:210px; color:var(--r-success); opacity:.06; }
+    .bg-deco .d-spark-1{ top:17%; right:21%; width:46px; color:var(--r-brand); opacity:.10; }
+    .bg-deco .d-spark-2{ bottom:22%; left:24%; width:34px; color:var(--r-success); opacity:.10; }
+    @media (max-width:680px){ .bg-deco .d-wave-1,.bg-deco .d-wave-2,.bg-deco .d-spark-1{ display:none; } }
+
+    /* Faixa decorativa no topo do card */
+    .card-accent{ display:block; width:100%; height:16px; margin:-2px 0 14px; color:var(--r-brand); opacity:.45; }
+    .card-accent svg{ width:100%; height:100%; }
+
+    /* Titulo com selo de energia */
+    .h1-badge{ flex:0 0 auto; width:40px; height:40px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; background:var(--r-brand-tint); color:var(--r-brand); box-shadow:inset 0 0 0 1px rgba(20,86,216,.14); }
+    .h1-badge svg{ width:24px; height:24px; }
+
+    /* Rotulo do seletor com icone */
+    .tipo-lead{ display:inline-flex; align-items:center; gap:7px; }
+    .tipo-lead svg{ width:16px; height:16px; color:var(--r-brand); }
+
+    /* Icones inline nos botoes/badges */
+    .action-icon svg{ width:17px; height:17px; }
+    .success-badge svg{ width:18px; height:18px; }
+    .side-button{ gap:8px; }
+    .side-ico{ display:inline-flex; align-items:center; }
+    .side-ico svg{ width:18px; height:18px; }
+
+    /* ===== Painel de diagnostico da conversao ===== */
+    .diag-panel{ margin-top:14px; padding:16px; border-radius:14px; border:1px solid var(--r-line); background:var(--r-surface); box-shadow:var(--r-shadow-sm); }
+    .diag-title{ font-family:"Space Grotesk","Segoe UI",sans-serif; font-weight:700; color:var(--r-ink); font-size:14px; margin-bottom:10px; }
+    .diag-banner{ padding:10px 12px; border-radius:10px; font-size:13px; font-weight:600; margin-bottom:12px; line-height:1.45; }
+    .diag-banner-ok{ background:#e9f9ef; color:#0f6330; border:1px solid #b8e6c8; }
+    .diag-banner-warn{ background:#fff4e5; color:#8a4b00; border:1px solid #ffd9a8; }
+    .diag-list{ display:flex; flex-direction:column; gap:6px; }
+    .diag-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; border:1px solid var(--r-line); background:var(--r-surface-2); font-size:12.5px; }
+    .diag-ic{ flex:0 0 22px; width:22px; height:22px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; color:#fff; }
+    .diag-name{ flex:0 0 auto; max-width:42%; font-weight:700; color:var(--r-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .diag-msg{ flex:1 1 auto; color:var(--r-ink-2); }
+    .diag-ok{ border-color:#bfe6cd; }
+    .diag-ok .diag-ic{ background:#16a34a; }
+    .diag-img{ border-color:#cdd6e4; background:#eef2f8; }
+    .diag-img .diag-ic{ background:#64748b; }
+    .diag-warn{ border-color:#ffd9a8; background:#fff8ef; }
+    .diag-warn .diag-ic{ background:#e08600; }
+    @media (max-width:640px){ .diag-name{ max-width:100%; } .diag-row{ flex-wrap:wrap; } }
   </style>
 
 <script>
@@ -1179,21 +1336,41 @@
   // Estado global
   let pagesTexts = [];         // texto consolidado (tudo junto)
   let pdfBuffers = [];         // [{ name, bytes: Uint8Array }]
-  let currentTipo = "enel";
+  let currentTipo = "enel_ce";
   let selectedFiles = [];      // File[] (multi seleção)
   let pagesMeta = []; // [{ pdfName, pdfIndex, pageNum }]
 
   // Config de cada tipo de fatura
   const TIPO_CONFIG = {
-    enel: {
-      nome: "Enel",
+    enel_ce: {
+      nome: "Enel CE",
       logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png",
       formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=h32KRtw5kEm37B9iNhACUjf5h_f9p5hIqNFizEk4SxdUQVAxRFlZQ0g5OVJEOEUxNEpLRENEQ0pNViQlQCN0PWcu&rebef1295d570419382cb678408ce6b56=%22Enel%22"
+    },
+    enel_sp: {
+      nome: "Enel SP",
+      logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png",
+      formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=h32KRtw5kEm37B9iNhACUjf5h_f9p5hIqNFizEk4SxdUQVAxRFlZQ0g5OVJEOEUxNEpLRENEQ0pNViQlQCN0PWcu&rebef1295d570419382cb678408ce6b56=%22Enel%22"
+    },
+    cemig: {
+      nome: "CEMIG",
+      logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/CEMIG_LOGO.png",
+      formUrl: ""
     },
     equatorial: {
       nome: "Equatorial",
       logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/equatorial_logo.png",
-      formUrl: "https://forms.office.com/SEU_LINK_EQUATORIAL_AQUI"
+      formUrl: ""
+    },
+    cosern: {
+      nome: "Cosern",
+      logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/COSERN_LOGO.png",
+      formUrl: ""
+    },
+    neoenergia: {
+      nome: "Neoenergia",
+      logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/neoenergia_logo.png",
+      formUrl: ""
     },
     outro: {
       nome: "Outro modelo",
@@ -1328,6 +1505,9 @@
   function parseEnelFaturas(pages) {
     const resultados = [];
 
+    // Modo definido pelo SELETOR (Enel CE x Enel SP), nao mais por deteccao automatica.
+    const modo = (currentTipo === "enel_ce") ? "CE" : "SP";
+
     pages.forEach((txt, idx) => {
 
       console.group(`📄 Página ${idx + 1}`);
@@ -1345,7 +1525,7 @@
       // ======== TIPO SP =========
       // ==========================
       // ⚠️ CORREÇÃO: SP só entra se NÃO for CE
-      if (isSP && !isCE) {
+      if (modo === "SP") {
 
         let instalacao = "";
         let nCliente = "";
@@ -1445,7 +1625,7 @@
       // ==========================
       // ======== TIPO CE =========
       // ==========================
-      if (isCE) {
+      if (modo === "CE") {
 
         let instalacao = "";
         let nCliente = "";
@@ -1545,6 +1725,315 @@
     return resultados;
   }
 
+  // ✅ Parser CEMIG (calibrado no texto real do pdf.js)
+  function parseCemigFaturas(pages) {
+    const resultados = [];
+    const MESES = { JAN:"01", FEV:"02", MAR:"03", ABR:"04", MAI:"05", JUN:"06",
+                    JUL:"07", AGO:"08", SET:"09", OUT:"10", NOV:"11", DEZ:"12" };
+
+    pages.forEach((txt, idx) => {
+      console.group(`⚡ CEMIG Página ${idx + 1}`);
+
+      // UC / Instalacao -> formato 99.999.999.999-99 (4 grupos + digito)
+      let instalacao = "";
+      const mUC =
+        txt.match(/N[º°.\s]*DA\s+UNIDADE\s+CONSUMIDORA\s+(\d{2}\.\d{3}\.\d{3}\.\d{3}-\d{2})/i) ||
+        txt.match(/\b(\d{2}\.\d{3}\.\d{3}\.\d{3}-\d{2})\b/);
+      if (mUC) instalacao = mUC[1];
+
+      const nCliente = ""; // CEMIG nao separa numero de cliente
+
+      // Vencimento -> a data dd/mm/aaaa imediatamente antes de "R$ <total>"
+      let vencimento = "";
+      const mVenc =
+        txt.match(/(\d{2}\/\d{2}\/\d{4})\s+R\$\s*[\d.,]+/) ||
+        txt.match(/Vencimento[\s\S]{0,40}?(\d{2}\/\d{2}\/\d{4})/i);
+      if (mVenc) vencimento = mVenc[1];
+
+      // Total -> primeiro valor com R$
+      let total = "";
+      const mTotal = txt.match(/R\$\s*([\d.,]+)/);
+      if (mTotal) total = mTotal[1];
+
+      // Mes/Ano -> "ABR/2026" convertido para "04/2026"
+      let mesAno = "";
+      const mMes = txt.match(/\b(JAN|FEV|MAR|ABR|MAI|JUN|JUL|AGO|SET|OUT|NOV|DEZ)\/(\d{4})\b/i);
+      if (mMes) mesAno = `${MESES[mMes[1].toUpperCase()]}/${mMes[2]}`;
+
+      // Nota Fiscal
+      let notaFiscal = "";
+      const nf = txt.match(/NOTA\s+FISCAL\s+N[º°]?\s*(\d+)/i);
+      if (nf) notaFiscal = nf[1];
+
+      // Chave de acesso (44 digitos)
+      let chaveAcesso = "";
+      const chave = txt.match(/chave\s+de\s+acesso:\s*([\d\s]{30,})/i);
+      if (chave) chaveAcesso = chave[1].replace(/\s+/g, "").slice(0, 44);
+
+      // Bandeira tarifaria -> "Band. Verde"
+      let bandeiraTarifaria = "";
+      const band = txt.match(/Band\.?\s*([\p{L}]+)/u);
+      if (band) bandeiraTarifaria = band[1].trim();
+
+      // Datas de leitura: o PDF traz só dd/mm (sem ano). Reconstituimos o ano
+      // usando o VENCIMENTO como ancora e tratando a virada de ano (dez -> jan).
+      let dataLeituraAnterior = "", dataLeituraAtual = "", numeroDias = "";
+      const leit = txt.match(/(\d{2}\/\d{2})(?!\/)\s+(\d{2}\/\d{2})(?!\/)\s+(\d{1,3})\s+(\d{2}\/\d{2})(?!\/)/);
+      if (leit) {
+        const ddmmAnt = leit[1];          // ex: "31/03"
+        const ddmmAtu = leit[2];          // ex: "30/04"
+        numeroDias    = leit[3];
+
+        const [, mAtu] = ddmmAtu.split("/").map(Number);
+        const [, mAnt] = ddmmAnt.split("/").map(Number);
+
+        // Ano da leitura ATUAL: parte do ano do vencimento; se a leitura ficou
+        // "depois" do vencimento, e porque pertence ao ano anterior.
+        const venc = (vencimento || "").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        let anoAtual = venc ? Number(venc[3]) : new Date().getFullYear();
+        if (venc) {
+          const [dA, mA] = ddmmAtu.split("/").map(Number);
+          const dataVenc = new Date(Number(venc[3]), Number(venc[2]) - 1, Number(venc[1]));
+          const candAtu  = new Date(anoAtual, mA - 1, dA);
+          if (candAtu > dataVenc) anoAtual -= 1;
+        }
+
+        // Ano da leitura ANTERIOR: igual ao da atual, salvo virada de ano
+        // (anterior em mes maior que a atual => caiu no ano anterior).
+        const anoAnterior = (mAnt > mAtu) ? anoAtual - 1 : anoAtual;
+
+        dataLeituraAtual    = `${ddmmAtu}/${anoAtual}`;
+        dataLeituraAnterior = `${ddmmAnt}/${anoAnterior}`;
+      }
+
+      // Consumo kWh -> "Energia Eletrica k Wh 60" (pdf.js separa kWh em "k Wh")
+      let consumoKwh = "";
+      const cons = txt.match(/Energia\s+El[eé]trica\s+k\s*Wh\s+(\d+)/i);
+      if (cons) consumoKwh = cons[1];
+
+      if (!instalacao || !vencimento || !total) {
+        console.warn("❌ CEMIG FALHOU NA VALIDAÇÃO", { instalacao, vencimento, total });
+        console.groupEnd();
+        return;
+      }
+
+      console.log("✅ CEMIG OK");
+
+      resultados.push({
+        pagina: idx + 1,
+        instalacao,
+        nCliente,
+        mesAno,
+        vencimento,
+        total,
+        bandeiraTarifaria,
+        dataLeituraAnterior,
+        dataLeituraAtual,
+        numeroDias,
+        consumoKwh,
+        chaveAcesso,
+        notaFiscal,
+        textoBruto: txt
+      });
+
+      console.groupEnd();
+    });
+
+    return resultados;
+  }
+
+  // ✅ Parser EQUATORIAL (calibrado no texto real do pdf.js)
+  function parseEquatorialFaturas(pages) {
+    const resultados = [];
+
+    pages.forEach((txt, idx) => {
+      console.group(`⚡ EQUATORIAL Página ${idx + 1}`);
+
+      // UC / Instalacao -> "Numero da UC 2.528.441.016-14"
+      let instalacao = "";
+      const mUC = txt.match(/\b(\d{1,2}\.\d{3}\.\d{3}\.\d{3}-\d{2})\b/);
+      if (mUC) instalacao = mUC[1];
+
+      // C.C (conta contrato) como numero do cliente (best effort)
+      let nCliente = "";
+      const mCC = txt.match(/LTDA\s+(\d{8,14})\s+[A-Za-z0-9]+\s+\d{2}\/\d{4}/);
+      if (mCC) nCliente = mCC[1];
+
+      // Vencimento: data logo apos "R$ <valor>"
+      let vencimento = "";
+      const mVenc =
+        txt.match(/R\$\s*[\d.,]+\s+(\d{2}\/\d{2}\/\d{4})/) ||
+        txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+      if (mVenc) vencimento = mVenc[1];
+
+      // Total
+      let total = "";
+      const mTotal = txt.match(/R\$\s*([\d.,]+)/);
+      if (mTotal) total = mTotal[1];
+
+      // Mes/Ano (competencia) - ja vem MM/AAAA. Lookbehind evita pegar o mes
+      // de uma data dd/mm/aaaa (ex: "03/2026" dentro de "18/03/2026").
+      let mesAno = "";
+      const mMes = txt.match(/(?<![\d\/])(\d{2}\/\d{4})(?![\d\/])/);
+      if (mMes) mesAno = mMes[1];
+
+      // Nota Fiscal
+      let notaFiscal = "";
+      const nf = txt.match(/NOTA\s+FISCAL\s+N[º°]?\s*(\d+)/i);
+      if (nf) notaFiscal = nf[1];
+
+      // Chave de acesso (44 digitos)
+      let chaveAcesso = "";
+      const chave = txt.match(/chave\s+de\s+acesso:\s*([\d\s]{30,})/i);
+      if (chave) chaveAcesso = chave[1].replace(/\s+/g, "").slice(0, 44);
+
+      // Bandeira tarifaria -> "Band. Tarif.: Verde"
+      let bandeiraTarifaria = "";
+      const band = txt.match(/Band\.?\s*Tarif\.?\s*:?\s*([\p{L}]+)/iu);
+      if (band) bandeiraTarifaria = band[1].trim();
+
+      // Datas de leitura (ja vem com ano) + dias
+      let dataLeituraAnterior = "", dataLeituraAtual = "", numeroDias = "";
+      const leit = txt.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{1,3})\s+(\d{2}\/\d{2}\/\d{4})/);
+      if (leit) {
+        dataLeituraAnterior = leit[1];
+        dataLeituraAtual    = leit[2];
+        numeroDias          = leit[3];
+      }
+
+      // Consumo kWh -> "Consumo (k Wh) 77"
+      let consumoKwh = "";
+      const cons =
+        txt.match(/Consumo\s*\(k\s*Wh\)\s*(\d+)/i) ||
+        txt.match(/ATIVO\s+TOTAL[\s\d.,]*?\s(\d+)\s+k\s*Wh/i);
+      if (cons) consumoKwh = cons[1];
+
+      if (!instalacao || !vencimento || !total) {
+        console.warn("❌ EQUATORIAL FALHOU NA VALIDAÇÃO", { instalacao, vencimento, total });
+        console.groupEnd();
+        return;
+      }
+
+      console.log("✅ EQUATORIAL OK");
+
+      resultados.push({
+        pagina: idx + 1,
+        instalacao,
+        nCliente,
+        mesAno,
+        vencimento,
+        total,
+        bandeiraTarifaria,
+        dataLeituraAnterior,
+        dataLeituraAtual,
+        numeroDias,
+        consumoKwh,
+        chaveAcesso,
+        notaFiscal,
+        textoBruto: txt
+      });
+
+      console.groupEnd();
+    });
+
+    return resultados;
+  }
+
+  // ✅ Parser COSERN / Neoenergia (LOTE: 1 PDF com varias faturas, 1 por pagina)
+  // Paginas de "conta coletiva" (resumo) e de "Fale com a gente" sao ignoradas
+  // automaticamente porque nao tem CODIGO DA INSTALACAO.
+  function parseCosernFaturas(pages) {
+    const resultados = [];
+
+    pages.forEach((txt, idx) => {
+      // Instalacao (so existe nas paginas de fatura individual)
+      let instalacao = "";
+      const mInst = txt.match(/C[ÓO]DIGO\s+DA\s+INSTALA[ÇC][ÃA]O\s+(\d+)/i);
+      if (mInst) instalacao = mInst[1];
+
+      let nCliente = "";
+      const mCli = txt.match(/C[ÓO]DIGO\s+DO\s+CLIENTE\s+(\d+)/i);
+      if (mCli) nCliente = mCli[1];
+
+      // Vencimento
+      let vencimento = "";
+      const mVenc = txt.match(/VENCIMENTO\s+(\d{2}\/\d{2}\/\d{4})/i);
+      if (mVenc) vencimento = mVenc[1];
+
+      // Total
+      let total = "";
+      const mTotal = txt.match(/TOTAL\s+A\s+PAGAR\s+R\$\s*([\d.,]+)/i);
+      if (mTotal) total = mTotal[1];
+
+      // Mes/Ano (REF) -> ja vem MM/AAAA (varia por fatura no lote)
+      let mesAno = "";
+      const mMes = txt.match(/REF:\s*M[ÊE]S\/ANO\s*(\d{2}\/\d{4})/i);
+      if (mMes) mesAno = mMes[1];
+
+      // Nota Fiscal
+      let notaFiscal = "";
+      const nf = txt.match(/NOTA\s+FISCAL\s+N[º°]?\s*(\d+)/i);
+      if (nf) notaFiscal = nf[1];
+
+      // Chave de acesso (44 digitos)
+      let chaveAcesso = "";
+      const chave = txt.match(/chave\s+de\s+acesso:\s*([\d\s]{30,})/i);
+      if (chave) chaveAcesso = chave[1].replace(/\s+/g, "").slice(0, 44);
+
+      // Bandeira -> "...bandeira em vigoréa Verde"
+      let bandeiraTarifaria = "";
+      const band = txt.match(/bandeira\s+em\s+vigor\S*\s*(Verde|Amarela|Vermelha)/i);
+      if (band) bandeiraTarifaria = band[1];
+
+      // Datas de leitura (com ano) + dias
+      let dataLeituraAnterior = "", dataLeituraAtual = "", numeroDias = "";
+      const leit = txt.match(/LEITURA\s+ANTERIOR\s+(\d{2}\/\d{2}\/\d{4})\s+LEITURA\s+ATUAL\s+(\d{2}\/\d{2}\/\d{4})\s+N[º°]?\s*DE\s+DIAS\s+(\d+)/i);
+      if (leit) {
+        dataLeituraAnterior = leit[1];
+        dataLeituraAtual    = leit[2];
+        numeroDias          = leit[3];
+      }
+
+      // Consumo kWh -> linha do medidor "Energia Ativa Único ... <consumo>"
+      let consumoKwh = "";
+      const cons = txt.match(/Energia\s+Ativa\s+[ÚU]nico\s+[\d.,]+\s+[\d.,]+\s+[\d.,]+\s+([\d.,]+)/i);
+      if (cons) consumoKwh = cons[1];
+
+      // So entra se for pagina de fatura individual valida
+      if (!instalacao || !vencimento || !total) {
+        return;
+      }
+
+      resultados.push({
+        pagina: idx + 1,
+        instalacao,
+        nCliente,
+        mesAno,
+        vencimento,
+        total,
+        bandeiraTarifaria,
+        dataLeituraAnterior,
+        dataLeituraAtual,
+        numeroDias,
+        consumoKwh,
+        chaveAcesso,
+        notaFiscal,
+        textoBruto: txt
+      });
+    });
+
+    console.log(`✅ COSERN: ${resultados.length} fatura(s) extraida(s).`);
+    return resultados;
+  }
+
+  // Dispatcher: escolhe o parser certo conforme o tipo selecionado.
+  function parseFaturas(pages) {
+    if (currentTipo === "cemig") return parseCemigFaturas(pages);
+    if (currentTipo === "equatorial") return parseEquatorialFaturas(pages);
+    if (currentTipo === "cosern" || currentTipo === "neoenergia") return parseCosernFaturas(pages);
+    return parseEnelFaturas(pages); // enel_ce / enel_sp
+  }
+
   function hideGlobalLoader(force = false) {
     const loader = document.getElementById("loader");
     if (!loader || loader.dataset.hidden === "1") return;
@@ -1594,6 +2083,8 @@
   function setTipo(tipo) {
     currentTipo = tipo;
     updateTipoUI();
+    // Re-roda o diagnostico se ja houver PDFs convertidos (a contagem depende do tipo)
+    if (pagesTexts && pagesTexts.length) renderDiagnostico();
   }
 
   function updateTipoUI() {
@@ -1690,6 +2181,7 @@
       status.textContent = `Pronto! ${files.length} PDF(s) lido(s), ${totalPages} página(s) no total.`;
       resultLoader.style.display = "none";
       resultInner.style.display  = "block";
+      renderDiagnostico();
     } catch (err) {
       console.error(err);
       status.textContent = "Erro ao ler os PDFs. Veja o console para detalhes.";
@@ -1701,6 +2193,85 @@
       button.disabled = false;
     }
   }
+
+  // ===== Diagnostico da conversao (coerencia + imagens nao convertidas) =====
+  function analisarConversao() {
+    const faturas = parseFaturas(pagesTexts);
+    const porPdf = pdfBuffers.map((b) => ({ name: b.name, total: 0, imagem: 0, texto: 0, faturas: 0 }));
+
+    pagesMeta.forEach((m, idx) => {
+      const rec = porPdf[m.pdfIndex];
+      if (!rec) return;
+      rec.total++;
+      const txt = (pagesTexts[idx] || "").trim();
+      if (txt.length < 30) rec.imagem++; else rec.texto++;
+    });
+
+    faturas.forEach((f) => {
+      const m = pagesMeta[f.pagina - 1];
+      if (m && porPdf[m.pdfIndex]) porPdf[m.pdfIndex].faturas++;
+    });
+
+    return { faturas, porPdf };
+  }
+
+  function renderDiagnostico() {
+    const box = document.getElementById("diagPanel");
+    if (!box) return;
+
+    if (!pagesTexts || pagesTexts.length === 0 || !pdfBuffers || pdfBuffers.length === 0) {
+      box.style.display = "none";
+      box.innerHTML = "";
+      return;
+    }
+
+    const { faturas, porPdf } = analisarConversao();
+    const cfg = TIPO_CONFIG[currentTipo] || {};
+    const nomeTipo = cfg.nome || currentTipo;
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    let imagens = 0, semFatura = 0;
+
+    const rows = porPdf.map((p) => {
+      let cls, icon, msg;
+      if (p.faturas > 0) {
+        cls = "diag-ok"; icon = "✓";
+        msg = `${p.faturas} fatura(s) reconhecida(s)` + (p.imagem > 0 ? ` · ${p.imagem} pág. imagem ignorada(s)` : "");
+      } else if (p.texto === 0) {
+        cls = "diag-img"; icon = "\u{1F5BC}"; imagens++;
+        msg = "imagem/escaneado — NÃO convertido (precisa OCR)";
+      } else {
+        cls = "diag-warn"; icon = "!"; semFatura++;
+        msg = `texto lido, 0 faturas reconhecidas como ${esc(nomeTipo)} — confira a concessionária selecionada`;
+      }
+      return `<div class="diag-row ${cls}">
+        <span class="diag-ic">${icon}</span>
+        <span class="diag-name" title="${esc(p.name)}">${esc(p.name)}</span>
+        <span class="diag-msg">${msg}</span>
+      </div>`;
+    }).join("");
+
+    const problemas = imagens + semFatura;
+    let bclass, banner;
+    if (problemas === 0) {
+      bclass = "diag-banner-ok";
+      banner = `✓ Tudo certo — <b>${faturas.length}</b> fatura(s) reconhecida(s) em ${porPdf.length} arquivo(s). O Excel terá <b>${faturas.length}</b> linha(s).`;
+    } else {
+      bclass = "diag-banner-warn";
+      const partes = [];
+      if (imagens) partes.push(`<b>${imagens}</b> arquivo(s) em imagem (não convertidos)`);
+      if (semFatura) partes.push(`<b>${semFatura}</b> arquivo(s) sem fatura reconhecida`);
+      banner = `⚠ Atenção: ${partes.join(" · ")}. Reconhecidas <b>${faturas.length}</b> fatura(s) como <b>${esc(nomeTipo)}</b> → Excel terá <b>${faturas.length}</b> linha(s).`;
+    }
+
+    box.style.display = "block";
+    box.innerHTML = `
+      <div class="diag-title">Diagnóstico da conversão</div>
+      <div class="diag-banner ${bclass}">${banner}</div>
+      <div class="diag-list">${rows}</div>
+    `;
+  }
+
 let __progressTotal = 0;
 let __progressDone = 0;
 
@@ -1764,10 +2335,15 @@ async function downloadArquivosTratados() {
     return;
   }
 
-  if (currentTipo !== "enel") {
-    alert("Download em lote (sem ZIP) disponível apenas para ENEL.");
+  const SUPORTADOS = ["enel_ce", "enel_sp", "cemig", "equatorial", "cosern", "neoenergia"];
+  if (!SUPORTADOS.includes(currentTipo)) {
+    alert("Download disponível apenas para: Enel CE, Enel SP, CEMIG, Equatorial, Cosern e Neoenergia.");
     return;
   }
+
+  // Nome do PDF estruturado conforme a concessionaria selecionada
+  const TAG_ARQUIVO = { enel_ce: "ENEL_CE", enel_sp: "ENEL_SP", cemig: "CEMIG", equatorial: "EQUATORIAL", cosern: "COSERN", neoenergia: "NEOENERGIA" };
+  const mergedName = `PDF_ESTRUTURADO_${TAG_ARQUIVO[currentTipo] || "FATURAS"}.pdf`;
 
   // =============================
   // Helpers locais
@@ -1779,10 +2355,11 @@ async function downloadArquivosTratados() {
     return m ? `${m[1]}.${m[2]}` : "00.00";
   };
 
-const makePdfName = (instalacao, nf, venc, idx) => {
+const makePdfName = (instalacao, nf, venc, idx, cliente) => {
   const partes = [];
 
   if (instalacao) partes.push(`INSTALACAO ${instalacao}`);
+  if (cliente) partes.push(`CLIENTE ${cliente}`);
 
   const data = fmtVencDDMM(venc);
   if (data !== "00.00") partes.push(data);
@@ -1819,10 +2396,10 @@ const makePdfName = (instalacao, nf, venc, idx) => {
     // 1) Parse das faturas
     // =============================
     status.textContent = "Identificando faturas...";
-    const faturas = parseEnelFaturas(pagesTexts);
+    const faturas = parseFaturas(pagesTexts);
 
     if (!faturas || faturas.length === 0) {
-      alert("Nenhuma fatura ENEL padrão encontrada no texto.");
+      alert("Nenhuma fatura encontrada no texto para o tipo selecionado.");
       return;
     }
 
@@ -1841,14 +2418,9 @@ const makePdfName = (instalacao, nf, venc, idx) => {
 
     Object.values(byPdf).forEach(list => list.sort((a, b) => a.pagina - b.pagina));
 
-    // total = 1 excel + 1 pdf estruturado + (somente PDFs originais com 1 fatura)
-    let totalDownloads = 2;
-
-    for (let i = 0; i < pdfBuffers.length; i++) {
-      const list = byPdf[pdfBuffers[i].name];
-      if (list && list.length === 1) totalDownloads += 1; // só 1 fatura => baixa 1 pdf
-      // se 0 ou >1 => não baixa nada (ignora)
-    }
+    // total = 1 excel + 1 pdf estruturado + 1 pdf renomeado POR FATURA
+    // (individual = PDF inteiro; lote = 1 pagina por fatura; misturado = ambos)
+    const totalDownloads = 2 + faturas.length;
 
     if (hasOverlay) showProgressOverlay(totalDownloads, "Preparando downloads...");
 
@@ -1917,7 +2489,7 @@ const makePdfName = (instalacao, nf, venc, idx) => {
     // 4) PDF estruturado (mesclado)
     // =============================
     status.textContent = "Gerando PDF estruturado...";
-    if (hasOverlay) updateProgressOverlay(0, "Gerando: PDF_ESTRUTURADO_ENEL.pdf");
+    if (hasOverlay) updateProgressOverlay(0, `Gerando: ${mergedName}`);
 
     const mergedPdf = await PDFLib.PDFDocument.create();
 
@@ -1930,48 +2502,62 @@ const makePdfName = (instalacao, nf, venc, idx) => {
     const mergedPdfBytes = await mergedPdf.save();
     const mergedBlob = new Blob([mergedPdfBytes], { type: "application/pdf" });
 
-    if (hasOverlay) updateProgressOverlay(0, "Baixando: PDF_ESTRUTURADO_ENEL.pdf");
-    await forceDownload(mergedBlob, "PDF_ESTRUTURADO_ENEL.pdf");
+    if (hasOverlay) updateProgressOverlay(0, `Baixando: ${mergedName}`);
+    await forceDownload(mergedBlob, mergedName);
     if (hasOverlay) updateProgressOverlay(1);
     await sleep(220);
 
 // =============================
-// 5) PDFs originais renomeados
-// Regra: só baixar PDFs que tenham EXATAMENTE 1 fatura
+// 5) PDFs por fatura renomeados (modelo unico p/ todas as concessionarias)
+//    PDF com 1 fatura  -> baixa o PDF INTEIRO renomeado (preserva paginas).
+//    PDF com 2+ faturas (lote) -> separa 1 PAGINA por fatura.
+//    Selecao misturada -> resolve PDF a PDF automaticamente.
 // =============================
-status.textContent = "Baixando PDFs originais (somente faturas unicas)...";
+status.textContent = "Gerando PDFs por fatura...";
+
+const donorsCache = {};
+const nomeCount = {};
+
+// Baixa garantindo nome unico (evita sobrescrever faturas com mesmo UC/NF/venc)
+const baixarFatura = async (blob, f) => {
+  // Neoenergia/Cosern: inclui tambem o Codigo do Cliente no nome
+  const cliente = (currentTipo === "cosern" || currentTipo === "neoenergia") ? (f.nCliente || "") : "";
+  let nome = makePdfName(f.instalacao, f.notaFiscal, f.vencimento, 1, cliente);
+  nomeCount[nome] = (nomeCount[nome] || 0) + 1;
+  if (nomeCount[nome] > 1) {
+    nome = makePdfName(f.instalacao, f.notaFiscal, f.vencimento, nomeCount[nome], cliente);
+  }
+  if (hasOverlay) updateProgressOverlay(0, `Baixando: ${nome}`);
+  await forceDownload(blob, nome);
+  if (hasOverlay) updateProgressOverlay(1);
+  await sleep(180);
+};
 
 for (let i = 0; i < pdfBuffers.length; i++) {
   const original = pdfBuffers[i];
   const list = byPdf[original.name];
+  if (!list || list.length === 0) continue; // PDF sem fatura reconhecida -> ignora
 
-  // ❌ não identificou fatura → não baixa
-  if (!list || list.length === 0) continue;
+  if (list.length === 1) {
+    // Individual: PDF original inteiro (mantem todas as paginas)
+    const blob = new Blob([original.bytes], { type: "application/pdf" });
+    await baixarFatura(blob, list[0]);
+  } else {
+    // Lote: extrai a pagina de cada fatura deste PDF
+    if (!donorsCache[i]) donorsCache[i] = await PDFLib.PDFDocument.load(original.bytes);
+    const donor = donorsCache[i];
 
-  // ❌ mais de uma fatura no mesmo PDF → não baixar
-  if (list.length > 1) {
-    console.warn(
-      `[IGNORADO] PDF com multiplas faturas (${list.length}):`,
-      original.name
-    );
-    continue;
+    for (const f of list) {
+      const meta = pagesMeta && pagesMeta[f.pagina - 1];
+      if (!meta) continue;
+      const single = await PDFLib.PDFDocument.create();
+      const [pg] = await single.copyPages(donor, [meta.pageNum - 1]);
+      single.addPage(pg);
+      const bytes = await single.save();
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      await baixarFatura(blob, f);
+    }
   }
-
-  // ✅ exatamente 1 fatura → baixar
-  const f = list[0];
-  const novoNome = makePdfName(
-  f.instalacao,
-  f.notaFiscal,
-  f.vencimento,
-  1
-);
-
-  const pdfBlob = new Blob([original.bytes], { type: "application/pdf" });
-
-  if (hasOverlay) updateProgressOverlay(0, `Baixando: ${novoNome}`);
-  await forceDownload(pdfBlob, novoNome);
-  if (hasOverlay) updateProgressOverlay(1);
-  await sleep(220);
 }
 
     status.textContent = "Downloads iniciados com sucesso.";
@@ -2003,6 +2589,18 @@ for (let i = 0; i < pdfBuffers.length; i++) {
 </head>
 
 <body>
+  <!-- Camada decorativa de SVGs espalhados pela pagina -->
+  <div class="bg-deco" aria-hidden="true">
+    <svg class="d-bolt-1" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+    <svg class="d-bolt-2" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+    <svg class="d-ring-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg>
+    <svg class="d-ring-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg>
+    <svg class="d-wave-1" viewBox="0 0 120 40" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M2 20 Q17 2 32 20 T62 20 T92 20 T118 20"/></svg>
+    <svg class="d-wave-2" viewBox="0 0 120 40" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M2 20 Q17 2 32 20 T62 20 T92 20 T118 20"/></svg>
+    <svg class="d-spark-1" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>
+    <svg class="d-spark-2" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z"/></svg>
+  </div>
+
   <!-- Loader global -->
   <div id="loader">
     <img
@@ -2028,35 +2626,98 @@ for (let i = 0; i < pdfBuffers.length; i++) {
   </div>
 
   <div class="card">
-    <h1>ESTRUTURADOR DE FATURAS DE ENERGIA - MOBIT</h1>
+    <div class="card-accent" aria-hidden="true">
+      <svg viewBox="0 0 1200 24" preserveAspectRatio="none" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M0 12 Q60 0 120 12 T240 12 T360 12 T480 12 T600 12 T720 12 T840 12 T960 12 T1080 12 T1200 12"/>
+      </svg>
+    </div>
+    <h1>
+      <span class="h1-badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+      </span>
+      ESTRUTURADOR DE FATURAS DE ENERGIA - MOBIT
+    </h1>
 
     <p>Escolha a concession&aacute;ria, selecione os PDFs e gere o arquivo Excel.</p>
 
     <!-- Seletor de tipo de fatura -->
     <div class="tipo-fatura">
-      <span><strong>Tipo de fatura:</strong></span>
+      <span class="tipo-lead">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+        <strong>Tipo de fatura:</strong>
+      </span>
 
       <label class="tipo-option">
-        <input type="radio" name="tipoFatura" value="enel" checked onclick="setTipo('enel')">
+        <input type="radio" name="tipoFatura" value="enel_ce" checked onclick="setTipo('enel_ce')">
         <span class="tipo-option-content">
           <img
             src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png"
-            alt="Enel"
+            alt="Enel CE"
             class="tipo-option-logo"
+          >
+          <span class="tipo-option-label">CE</span>
+        </span>
+      </label>
+
+      <label class="tipo-option">
+        <input type="radio" name="tipoFatura" value="enel_sp" onclick="setTipo('enel_sp')">
+        <span class="tipo-option-content">
+          <img
+            src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/enel_logo.png"
+            alt="Enel SP"
+            class="tipo-option-logo"
+          >
+          <span class="tipo-option-label">SP</span>
+        </span>
+      </label>
+
+      <label class="tipo-option is-disabled" title="Em breve">
+        <input type="radio" name="tipoFatura" value="cemig" onclick="setTipo('cemig')" disabled>
+        <span class="tipo-option-content">
+          <img
+            src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/CEMIG_LOGO.png"
+            alt="CEMIG"
+            class="tipo-option-logo"
+            onerror="this.style.display='none';"
           >
         </span>
       </label>
 
-      <!--<label class="tipo-option">
+      <label class="tipo-option">
         <input type="radio" name="tipoFatura" value="equatorial" onclick="setTipo('equatorial')">
         <span class="tipo-option-content">
           <img
             src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/equatorial_logo.png"
             alt="Equatorial"
             class="tipo-option-logo"
+            onerror="this.style.display='none';"
           >
         </span>
-      </label>-->
+      </label>
+
+      <label class="tipo-option is-disabled" title="Em breve">
+        <input type="radio" name="tipoFatura" value="cosern" onclick="setTipo('cosern')" disabled>
+        <span class="tipo-option-content">
+          <img
+            src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/COSERN_LOGO.png"
+            alt="Cosern"
+            class="tipo-option-logo"
+            onerror="this.style.display='none';"
+          >
+        </span>
+      </label>
+
+      <label class="tipo-option is-disabled" title="Em breve">
+        <input type="radio" name="tipoFatura" value="neoenergia" onclick="setTipo('neoenergia')" disabled>
+        <span class="tipo-option-content">
+          <img
+            src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/neoenergia_logo.png"
+            alt="Neoenergia"
+            class="tipo-option-logo"
+            onerror="this.style.display='none';"
+          >
+        </span>
+      </label>
     </div>
 
     <!-- Passo 1 -->
@@ -2075,12 +2736,16 @@ for (let i = 0; i < pdfBuffers.length; i++) {
     <!-- Bot?es -->
     <div class="action-row">
       <button type="button" class="action-btn" onclick="pickPdfs()">
-        <span class="action-icon">+</span>
+        <span class="action-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M12 11v6M9 14h6"/></svg>
+        </span>
         <span>Selecionar PDFs</span>
       </button>
 
       <button type="button" class="action-btn danger" onclick="clearAllPdfs()">
-        <span class="action-icon">?</span>
+        <span class="action-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6"/></svg>
+        </span>
         <span>Limpar lista</span>
       </button>
     </div>
@@ -2128,7 +2793,9 @@ for (let i = 0; i < pdfBuffers.length; i++) {
           <div class="main-output">
             <div class="success-panel">
               <div class="success-header">
-                <div class="success-badge">&#10003;</div>
+                <div class="success-badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+                </div>
                 <div>
                   <div class="success-title">PDF processado com sucesso</div>
                   <div class="success-sub">
@@ -2154,16 +2821,14 @@ for (let i = 0; i < pdfBuffers.length; i++) {
               </button>
 
               <!-- DEBUG -->
-              <!-- 
               <button
                 class="download-button"
                 type="button"
-                style="background: linear-gradient(90deg, #374151, #111827); border-color: rgba(148,163,184,0.25);"
+                style="background:#fff; color:#52617a; border:1px dashed #cdd6e4; box-shadow:none;"
                 onclick="copyDebugText()"
               >
                 <span>Copiar texto convertido (DEBUG)</span>
               </button>
-              -->
             </div>
           </div>
 
@@ -2194,6 +2859,9 @@ for (let i = 0; i < pdfBuffers.length; i++) {
               class="side-button"
               onclick="openFormAtual()"
             >
+              <span class="side-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 13l2 2 4-4"/></svg>
+              </span>
               Registrar fatura (Enel)
             </button>
 
@@ -2211,6 +2879,9 @@ for (let i = 0; i < pdfBuffers.length; i++) {
               class="side-button panel-button"
               onclick="openPainel()"
             >
+              <span class="side-ico" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><rect x="6" y="11" width="3" height="6"/><rect x="11" y="7" width="3" height="10"/><rect x="16" y="13" width="3" height="4"/></svg>
+              </span>
               Abrir Painel de Acompanhamento
               <img
                 class="panel-logo"
@@ -2221,6 +2892,9 @@ for (let i = 0; i < pdfBuffers.length; i++) {
           </div>
 
         </div>
+
+        <!-- Diagnostico da conversao -->
+        <div id="diagPanel" class="diag-panel" style="display:none;"></div>
       </div>
     </div>
 
