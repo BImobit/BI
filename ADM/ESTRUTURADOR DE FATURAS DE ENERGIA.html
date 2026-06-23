@@ -1322,6 +1322,8 @@
     .diag-ok .diag-ic{ background:#16a34a; }
     .diag-img{ border-color:#cdd6e4; background:#eef2f8; }
     .diag-img .diag-ic{ background:#64748b; }
+    .diag-info{ border-color:#c7d2fe; background:#eef2ff; }
+    .diag-info .diag-ic{ background:#4f46e5; }
     .diag-warn{ border-color:#ffd9a8; background:#fff8ef; }
     .diag-warn .diag-ic{ background:#e08600; }
     @media (max-width:640px){ .diag-name{ max-width:100%; } .diag-row{ flex-wrap:wrap; } }
@@ -1355,22 +1357,22 @@
     cemig: {
       nome: "CEMIG",
       logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/CEMIG_LOGO.png",
-      formUrl: ""
+      formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=h32KRtw5kEm37B9iNhACUjf5h_f9p5hIqNFizEk4SxdUQVAxRFlZQ0g5OVJEOEUxNEpLRENEQ0pNViQlQCN0PWcu&rebef1295d570419382cb678408ce6b56=%22Cemig%22"
     },
     equatorial: {
       nome: "Equatorial",
       logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/equatorial_logo.png",
-      formUrl: ""
+      formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=h32KRtw5kEm37B9iNhACUjf5h_f9p5hIqNFizEk4SxdUQVAxRFlZQ0g5OVJEOEUxNEpLRENEQ0pNViQlQCN0PWcu&rebef1295d570419382cb678408ce6b56=%22Equatorial%22"
     },
     cosern: {
       nome: "Cosern",
       logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/COSERN_LOGO.png",
-      formUrl: ""
+      formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=h32KRtw5kEm37B9iNhACUjf5h_f9p5hIqNFizEk4SxdUQVAxRFlZQ0g5OVJEOEUxNEpLRENEQ0pNViQlQCN0PWcu&rebef1295d570419382cb678408ce6b56=%22Cosern%22"
     },
     neoenergia: {
       nome: "Neoenergia",
       logo: "https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/neoenergia_logo.png",
-      formUrl: ""
+      formUrl: "https://forms.office.com/Pages/ResponsePage.aspx?id=h32KRtw5kEm37B9iNhACUjf5h_f9p5hIqNFizEk4SxdUQVAxRFlZQ0g5OVJEOEUxNEpLRENEQ0pNViQlQCN0PWcu&rebef1295d570419382cb678408ce6b56=%22Neoenergia%22"
     },
     outro: {
       nome: "Outro modelo",
@@ -2197,19 +2199,20 @@
   // ===== Diagnostico da conversao (coerencia + imagens nao convertidas) =====
   function analisarConversao() {
     const faturas = parseFaturas(pagesTexts);
-    const porPdf = pdfBuffers.map((b) => ({ name: b.name, total: 0, imagem: 0, texto: 0, faturas: 0 }));
+    const fatPages = new Set(faturas.map((f) => f.pagina));
+    // Paginas de "resumo"/agrupador (capa de lote): nao sao faturas individuais -> ignorar sem alarde
+    const reResumo = /FATURA\s+AGRUPADORA|DOCUMENTO\s+AGRUPADOR|CONTA\s+CONTRATO\s+COLETIVA|PAGAMENTO\s+DA\s+CONTA\s+COLETIVA/i;
+    const porPdf = pdfBuffers.map((b) => ({ name: b.name, total: 0, imagem: 0, resumo: 0, outro: 0, faturas: 0 }));
 
     pagesMeta.forEach((m, idx) => {
       const rec = porPdf[m.pdfIndex];
       if (!rec) return;
       rec.total++;
       const txt = (pagesTexts[idx] || "").trim();
-      if (txt.length < 30) rec.imagem++; else rec.texto++;
-    });
-
-    faturas.forEach((f) => {
-      const m = pagesMeta[f.pagina - 1];
-      if (m && porPdf[m.pdfIndex]) porPdf[m.pdfIndex].faturas++;
+      if (fatPages.has(idx + 1)) rec.faturas++;
+      else if (txt.length < 30) rec.imagem++;
+      else if (reResumo.test(txt)) rec.resumo++;
+      else rec.outro++;
     });
 
     return { faturas, porPdf };
@@ -2230,14 +2233,20 @@
     const nomeTipo = cfg.nome || currentTipo;
     const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-    let imagens = 0, semFatura = 0;
+    let imagens = 0, semFatura = 0, resumos = 0;
 
     const rows = porPdf.map((p) => {
       let cls, icon, msg;
       if (p.faturas > 0) {
         cls = "diag-ok"; icon = "✓";
-        msg = `${p.faturas} fatura(s) reconhecida(s)` + (p.imagem > 0 ? ` · ${p.imagem} pág. imagem ignorada(s)` : "");
-      } else if (p.texto === 0) {
+        const extras = [];
+        if (p.imagem > 0) extras.push(`${p.imagem} pág. imagem`);
+        if (p.resumo > 0) extras.push(`${p.resumo} pág. resumo`);
+        msg = `${p.faturas} fatura(s) reconhecida(s)` + (extras.length ? ` · ${extras.join(" · ")} ignorada(s)` : "");
+      } else if (p.outro === 0 && p.resumo > 0) {
+        cls = "diag-info"; icon = "\u{1F4C4}"; resumos++;
+        msg = "documento agrupador/resumo — sem faturas individuais (ignorado, ok)";
+      } else if (p.outro === 0 && p.imagem > 0) {
         cls = "diag-img"; icon = "\u{1F5BC}"; imagens++;
         msg = "imagem/escaneado — NÃO convertido (precisa OCR)";
       } else {
@@ -2256,12 +2265,14 @@
     if (problemas === 0) {
       bclass = "diag-banner-ok";
       banner = `✓ Tudo certo — <b>${faturas.length}</b> fatura(s) reconhecida(s) em ${porPdf.length} arquivo(s). O Excel terá <b>${faturas.length}</b> linha(s).`;
+      if (resumos) banner += ` (${resumos} documento(s) de resumo ignorado(s).)`;
     } else {
       bclass = "diag-banner-warn";
       const partes = [];
       if (imagens) partes.push(`<b>${imagens}</b> arquivo(s) em imagem (não convertidos)`);
       if (semFatura) partes.push(`<b>${semFatura}</b> arquivo(s) sem fatura reconhecida`);
       banner = `⚠ Atenção: ${partes.join(" · ")}. Reconhecidas <b>${faturas.length}</b> fatura(s) como <b>${esc(nomeTipo)}</b> → Excel terá <b>${faturas.length}</b> linha(s).`;
+      if (resumos) banner += ` (${resumos} documento(s) de resumo ignorado(s).)`;
     }
 
     box.style.display = "block";
