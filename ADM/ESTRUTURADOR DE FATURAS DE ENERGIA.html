@@ -1861,17 +1861,14 @@
       const mCC = txt.match(/LTDA\s+(\d{8,14})\s+[A-Za-z0-9]+\s+\d{2}\/\d{4}/);
       if (mCC) nCliente = mCC[1];
 
-      // Vencimento: data logo apos "R$ <valor>"
-      let vencimento = "";
-      const mVenc =
-        txt.match(/R\$\s*[\d.,]+\s+(\d{2}\/\d{2}\/\d{4})/) ||
-        txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
-      if (mVenc) vencimento = mVenc[1];
-
-      // Total
-      let total = "";
-      const mTotal = txt.match(/R\$\s*([\d.,]+)/);
-      if (mTotal) total = mTotal[1];
+      // Total + Vencimento juntos: padrao "R$ <valor 2 casas><vencimento>", as vezes
+      // COLADOS (ex.: "R$ 116,0421/06/2026"). Exigir valor monetario (2 casas decimais)
+      // seguido da data evita pegar textos como "custo adicional de R$ 1,885 a cada 100 kWh".
+      let total = "", vencimento = "";
+      const mTotVenc = txt.match(/R\$\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*(\d{2}\/\d{2}\/\d{4})/);
+      if (mTotVenc) { total = mTotVenc[1]; vencimento = mTotVenc[2]; }
+      if (!total) { const m = txt.match(/R\$\s*([\d.,]+)/); if (m) total = m[1]; }
+      if (!vencimento) { const m = txt.match(/\b(\d{2}\/\d{2}\/\d{4})\b/); if (m) vencimento = m[1]; }
 
       // Mes/Ano (competencia) - ja vem MM/AAAA. Lookbehind evita pegar o mes
       // de uma data dd/mm/aaaa (ex: "03/2026" dentro de "18/03/2026").
@@ -2413,6 +2410,12 @@ const makePdfName = (instalacao, nf, venc, idx, cliente) => {
       alert("Nenhuma fatura encontrada no texto para o tipo selecionado.");
       return;
     }
+
+    // Instalacao e Cliente sempre como SOMENTE numeros (remove pontos, tracos, espacos)
+    faturas.forEach((f) => {
+      f.instalacao = String(f.instalacao || "").replace(/\D/g, "");
+      f.nCliente   = String(f.nCliente   || "").replace(/\D/g, "");
+    });
 
     // =============================
     // 2) Agrupar por PDF original (pra saber quantos downloads vai ter)
