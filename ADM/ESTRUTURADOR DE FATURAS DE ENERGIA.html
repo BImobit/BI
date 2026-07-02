@@ -1341,6 +1341,7 @@
   let currentTipo = "enel_ce";
   let selectedFiles = [];      // File[] (multi seleção)
   let pagesMeta = []; // [{ pdfName, pdfIndex, pageNum }]
+  let skippedProtectedPdfNames = []; // PDFs protegidos pulados no lote atual
 
   // Config de cada tipo de fatura
   const TIPO_CONFIG = {
@@ -1493,6 +1494,7 @@
     pagesTexts = [];
     pagesMeta = [];
     pdfBuffers = [];
+    skippedProtectedPdfNames = [];
     renderPdfList();
     updatePdfCountInfo();
 
@@ -2116,6 +2118,67 @@
     }
   }
 
+  let pdfSessionPassword = "";
+
+  function isPdfPasswordException(err) {
+    const msg = (err && err.message ? err.message : "").toLowerCase();
+    return err && (
+      err.name === "PasswordException" ||
+      ((err.code === 1 || err.code === 2) && msg.includes("password"))
+    );
+  }
+
+  function createSkippedPasswordPdfError(fileName) {
+    const err = new Error(`PDF protegido por senha pulado: "${fileName}".`);
+    err.code = "PDF_PASSWORD_SKIPPED";
+    return err;
+  }
+
+  async function loadPdfDocumentWithPassword(ab, fileName) {
+    let passwordCancelled = false;
+    const loadingParams = { data: ab, password: pdfSessionPassword || "" };
+
+    const loadingTask = pdfjsLib.getDocument(loadingParams);
+
+    loadingTask.onPassword = (updatePassword, reason) => {
+      const responses = pdfjsLib.PasswordResponses || {};
+      const isIncorrect = reason === responses.INCORRECT_PASSWORD || reason === 2;
+      const password = window.prompt(
+        isIncorrect
+          ? `Senha incorreta para o PDF:\n${fileName}\n\nDigite a senha correta:`
+          : `O PDF abaixo esta protegido por senha:\n${fileName}\n\nDigite a senha para continuar ou clique em Cancelar para pular este PDF:`,
+        pdfSessionPassword || ""
+      );
+
+      if (password === null) {
+        passwordCancelled = true;
+        loadingTask.destroy();
+        return;
+      }
+
+      pdfSessionPassword = password;
+      updatePassword(password);
+    };
+
+    try {
+      return await loadingTask.promise;
+    } catch (err) {
+      if (passwordCancelled) {
+        throw createSkippedPasswordPdfError(fileName);
+      }
+
+      if (isPdfPasswordException(err)) {
+        throw new Error(
+          err.code === 2
+            ? `Senha incorreta para o PDF "${fileName}".`
+            : `O PDF "${fileName}" esta protegido por senha. Informe a senha quando solicitado.`
+        );
+      }
+
+      throw err;
+    }
+  }
+
   async function handleFileChange() {
     const status        = document.getElementById("status");
     const button        = document.getElementById("convertButton");
@@ -2141,6 +2204,8 @@
     pagesTexts = [];
     pagesMeta = [];
     pdfBuffers = [];
+    skippedProtectedPdfNames = [];
+    pdfSessionPassword = "";
 
     resultDiv.style.display = "block";
     resultLoader.style.display = "flex";
@@ -2157,10 +2222,22 @@
 
         const ab = await f.arrayBuffer();
         const bytes = new Uint8Array(ab.slice(0));
-        pdfBuffers.push({ name: f.name, bytes });
 
-        const loadingTask = pdfjsLib.getDocument({ data: ab });
-        const pdf = await loadingTask.promise;
+        let pdf;
+        try {
+          pdf = await loadPdfDocumentWithPassword(ab, f.name);
+        } catch (err) {
+          if (err && err.code === "PDF_PASSWORD_SKIPPED") {
+            skippedProtectedPdfNames.push(f.name);
+            status.textContent = `PDF protegido pulado: ${f.name}`;
+            continue;
+          }
+
+          throw err;
+        }
+
+        const pdfIndex = pdfBuffers.length;
+        pdfBuffers.push({ name: f.name, bytes });
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
           const page = await pdf.getPage(pageNum);
@@ -2170,21 +2247,27 @@
           const pageText = cleanText(rawPageText).trim();
 
           pagesTexts.push(pageText);
-          pagesMeta.push({ pdfName: f.name, pdfIndex: i, pageNum: pageNum });
+          pagesMeta.push({ pdfName: f.name, pdfIndex: pdfIndex, pageNum: pageNum });
           totalPages++;
         }
       }
 
       if (pageCountSpan) pageCountSpan.textContent = totalPages;
 
-      status.textContent = `Pronto! ${files.length} PDF(s) lido(s), ${totalPages} página(s) no total.`;
+      const readFiles = files.length - skippedProtectedPdfNames.length;
+      status.textContent = skippedProtectedPdfNames.length
+        ? `Pronto! ${readFiles} PDF(s) lido(s), ${totalPages} página(s). ${skippedProtectedPdfNames.length} PDF(s) protegido(s) pulado(s).`
+        : `Pronto! ${files.length} PDF(s) lido(s), ${totalPages} página(s) no total.`;
       resultLoader.style.display = "none";
       resultInner.style.display  = "block";
       renderDiagnostico();
     } catch (err) {
       console.error(err);
-      status.textContent = "Erro ao ler os PDFs. Veja o console para detalhes.";
-      alert("Deu erro ao ler os PDFs.");
+      const errorMessage = err && err.message
+        ? err.message
+        : "Erro ao ler os PDFs. Veja o console para detalhes.";
+      status.textContent = errorMessage;
+      alert(errorMessage);
       resultLoader.style.display = "none";
       resultInner.style.display  = "none";
       resultDiv.style.display    = "none";
@@ -2219,7 +2302,11 @@
     const box = document.getElementById("diagPanel");
     if (!box) return;
 
-    if (!pagesTexts || pagesTexts.length === 0 || !pdfBuffers || pdfBuffers.length === 0) {
+    const protectedNames = skippedProtectedPdfNames || [];
+    const hasConvertedPages = pagesTexts && pagesTexts.length > 0 && pdfBuffers && pdfBuffers.length > 0;
+    const hasSkippedProtected = protectedNames.length > 0;
+
+    if (!hasConvertedPages && !hasSkippedProtected) {
       box.style.display = "none";
       box.innerHTML = "";
       return;
@@ -2232,7 +2319,7 @@
 
     let imagens = 0, semFatura = 0, resumos = 0;
 
-    const rows = porPdf.map((p) => {
+    const pdfRows = porPdf.map((p) => {
       let cls, icon, msg;
       if (p.faturas > 0) {
         cls = "diag-ok"; icon = "✓";
@@ -2257,7 +2344,17 @@
       </div>`;
     }).join("");
 
-    const problemas = imagens + semFatura;
+    const protectedRows = protectedNames.map((name) => `
+      <div class="diag-row diag-warn">
+        <span class="diag-ic">!</span>
+        <span class="diag-name" title="${esc(name)}">${esc(name)}</span>
+        <span class="diag-msg">PDF protegido por senha - pulado; informe a senha para converter esta fatura</span>
+      </div>
+    `).join("");
+
+    const rows = pdfRows + protectedRows;
+    const protegidos = protectedNames.length;
+    const problemas = imagens + semFatura + protegidos;
     let bclass, banner;
     if (problemas === 0) {
       bclass = "diag-banner-ok";
@@ -2268,6 +2365,7 @@
       const partes = [];
       if (imagens) partes.push(`<b>${imagens}</b> arquivo(s) em imagem (não convertidos)`);
       if (semFatura) partes.push(`<b>${semFatura}</b> arquivo(s) sem fatura reconhecida`);
+      if (protegidos) partes.push(`<b>${protegidos}</b> PDF(s) protegido(s) por senha pulado(s)`);
       banner = `⚠ Atenção: ${partes.join(" · ")}. Reconhecidas <b>${faturas.length}</b> fatura(s) como <b>${esc(nomeTipo)}</b> → Excel terá <b>${faturas.length}</b> linha(s).`;
       if (resumos) banner += ` (${resumos} documento(s) de resumo ignorado(s).)`;
     }
@@ -2709,8 +2807,8 @@ for (let i = 0; i < pdfBuffers.length; i++) {
         </span>
       </label>
 
-      <label class="tipo-option is-disabled" title="Em breve">
-        <input type="radio" name="tipoFatura" value="cosern" onclick="setTipo('cosern')" disabled>
+      <label class="tipo-option">
+        <input type="radio" name="tipoFatura" value="cosern" onclick="setTipo('cosern')">
         <span class="tipo-option-content">
           <img
             src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/COSERN_LOGO.png"
