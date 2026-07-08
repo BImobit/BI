@@ -1398,6 +1398,33 @@
     return t;
   }
 
+  // ===== Deteccao de fatura em IMAGEM (print de e-mail) =====
+  // Alguns PDFs sao um print do Outlook onde a fatura e uma IMAGEM, sem camada de
+  // texto. O pdf.js so le o cabecalho/rodape do e-mail. Aqui removemos esse ruido
+  // para descobrir se sobra conteudo de fatura de verdade; se nao sobra, avisamos
+  // a pessoa para baixar o PDF ORIGINAL (com texto) no portal.
+
+  // A pagina TEM conteudo de fatura de verdade? (palavras-chave fortes da conta)
+  // O pdf.js so consegue ler esses termos quando existe camada de TEXTO. Se a
+  // fatura e uma imagem, nenhum deles aparece.
+  function pageHasInvoiceText(txt) {
+    return /(INSTALA[ÇC][ÃA]O|VENCIMENTO|TOTAL\s+A\s+PAGAR|C[ÓO]DIGO\s+DO\s+CLIENTE|NEOENERGIA|COSERN|TARIFA|BANDEIRA|\bkWh\b)/i
+      .test(String(txt || ""));
+  }
+
+  // Pagina e "imagem" (print de e-mail / escaneado) quando NAO tem nenhuma
+  // palavra-chave de fatura E ou (a) e claramente um print do Outlook, ou
+  // (b) quase nao tem texto (escaneado puro). Robusto: nao depende do tamanho
+  // do lixo do cabecalho (nome do destinatario, URL quebrada do Outlook, etc.),
+  // e nunca confunde uma fatura de texto de verdade — que sempre casa acima.
+  function pageLooksLikeImage(txt) {
+    const t = String(txt || "");
+    if (pageHasInvoiceText(t)) return false;
+    const isOutlookPrint = /Outlook/i.test(t);
+    const semTexto = t.replace(/\s+/g, "").length < 40; // escaneado quase vazio
+    return isOutlookPrint || semTexto;
+  }
+
   // ✅ DEBUG: copiar texto convertido
   function copyDebugText() {
     if (!pagesTexts || pagesTexts.length === 0) {
@@ -2290,7 +2317,7 @@
       rec.total++;
       const txt = (pagesTexts[idx] || "").trim();
       if (fatPages.has(idx + 1)) rec.faturas++;
-      else if (txt.length < 30) rec.imagem++;
+      else if (pageLooksLikeImage(txt)) rec.imagem++;   // fatura veio como IMAGEM (print de e-mail)
       else if (reResumo.test(txt)) rec.resumo++;
       else rec.outro++;
     });
@@ -2332,7 +2359,7 @@
         msg = "documento agrupador/resumo — sem faturas individuais (ignorado, ok)";
       } else if (p.outro === 0 && p.imagem > 0) {
         cls = "diag-img"; icon = "\u{1F5BC}"; imagens++;
-        msg = "imagem/escaneado — NÃO convertido (precisa OCR)";
+        msg = "fatura em IMAGEM (print de e-mail), sem texto — baixe o PDF ORIGINAL da fatura no portal da concessionária e use esse arquivo.";
       } else {
         cls = "diag-warn"; icon = "!"; semFatura++;
         msg = `texto lido, 0 faturas reconhecidas como ${esc(nomeTipo)} — confira a concessionária selecionada`;
@@ -2363,7 +2390,7 @@
     } else {
       bclass = "diag-banner-warn";
       const partes = [];
-      if (imagens) partes.push(`<b>${imagens}</b> arquivo(s) em imagem (não convertidos)`);
+      if (imagens) partes.push(`<b>${imagens}</b> fatura(s) em IMAGEM — baixe o PDF ORIGINAL no portal`);
       if (semFatura) partes.push(`<b>${semFatura}</b> arquivo(s) sem fatura reconhecida`);
       if (protegidos) partes.push(`<b>${protegidos}</b> PDF(s) protegido(s) por senha pulado(s)`);
       banner = `⚠ Atenção: ${partes.join(" · ")}. Reconhecidas <b>${faturas.length}</b> fatura(s) como <b>${esc(nomeTipo)}</b> → Excel terá <b>${faturas.length}</b> linha(s).`;
@@ -2932,7 +2959,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
                 </span>
               </button>
 
-              <!-- DEBUG -->
+              <!-- DEBUG (desativado) - reative removendo os comentarios abaixo p/ inspecionar o texto extraido dos PDFs
               <button
                 class="download-button"
                 type="button"
@@ -2941,6 +2968,7 @@ for (let i = 0; i < pdfBuffers.length; i++) {
               >
                 <span>Copiar texto convertido (DEBUG)</span>
               </button>
+              -->
             </div>
           </div>
 
