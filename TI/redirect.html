@@ -118,24 +118,53 @@
     const sk = document.getElementById('skeleton');
     if (!sk) return;
 
-    // tempo mínimo extra depois do load do iframe (ajusta se quiser)
-    const delayMs = 1800; // 1.8s
+    const delayMs = 1800;
 
     setTimeout(() => {
       sk.style.opacity = '0';
+
       setTimeout(() => {
-      sk.style.display = 'none';
-      }, 400); // mesmo tempo do transition do CSS
+        sk.style.display = 'none';
+      }, 400);
     }, delayMs);
   }
 
   (function initFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+
+    const link = params.get('link') || '';
+    const datasetId = params.get('datasetId') || '';
+
+    /*
+      DATASET QUE DEVE ABRIR DIRETO
+    */
+    const DATASET_DIRETO = '99c236f1-0d93-4001-b012-151ceda4ce09';
+
+    /*
+      Se for esse dataset:
+      NÃO carrega skeleton
+      NÃO carrega iframe
+      NÃO mantém essa página
+
+      Vai direto para o Power BI.
+    */
+    if (
+      datasetId.toLowerCase() === DATASET_DIRETO.toLowerCase() &&
+      link
+    ) {
+      window.location.replace(link);
+      return;
+    }
+
+    // ------------------------------------------------
+    // Funcionamento normal para os demais dashboards
+    // ------------------------------------------------
+
     const frame = document.getElementById('pbFrame');
     const logo = document.getElementById('skeletonLogo');
+
     if (!frame) return;
 
-    const params = new URLSearchParams(window.location.search);
-    const link = params.get('link') || frame.dataset.defaultSrc || '';
     const title = params.get('title');
     const logoUrl = params.get('logo');
     const iconUrl = params.get('icon');
@@ -143,6 +172,7 @@
     if (title) {
       document.title = title;
     }
+
     if (iconUrl) {
       const fav = document.createElement('link');
       fav.rel = 'icon';
@@ -150,12 +180,18 @@
       fav.href = iconUrl;
       document.head.appendChild(fav);
     }
+
     if (logo && logoUrl) {
       logo.src = logoUrl;
       logo.style.display = '';
     }
 
-    frame.addEventListener('load', hideSkeletonComDelay, { once: true });
+    frame.addEventListener(
+      'load',
+      hideSkeletonComDelay,
+      { once: true }
+    );
+
     if (link) {
       frame.src = link;
     } else {
