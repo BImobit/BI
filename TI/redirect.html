@@ -18,14 +18,14 @@
     .pb-wrap {
       width: 100%;
       height: 100%;
-      overflow: hidden;  /* corta o excesso (barra inferior) */
+      overflow: hidden;
       position: relative;
     }
 
     .pb-frame {
       width: 100%;
-      height: calc(100% + 62px); /* deixa o BI maior pra baixo */
-      margin-bottom: -62px;      /* empurra pra baixo sem cortar o topo */
+      height: calc(100% + 62px);
+      margin-bottom: -62px;
       border: none;
     }
 
@@ -44,26 +44,26 @@
     }
 
     .skeleton-shimmer {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    120deg,
-    #0D274D 0%,      /* escuro */
-    #12376B 25%,     /* principal */
-    #1A4A8E 50%,     /* claro */
-    #12376B 75%,     /* principal */
-    #0D274D 100%     /* escuro */
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  opacity: 0.55;
-}
-
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        120deg,
+        #0D274D 0%,
+        #12376B 25%,
+        #1A4A8E 50%,
+        #12376B 75%,
+        #0D274D 100%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      opacity: 0.55;
+    }
 
     @keyframes shimmer {
       0% {
         background-position: -200% 0;
       }
+
       100% {
         background-position: 200% 0;
       }
@@ -91,15 +91,26 @@
     }
   </style>
 </head>
+
 <body>
 
 <div class="pb-wrap">
+
   <!-- Skeleton + Logo -->
   <div id="skeleton" class="skeleton-overlay">
     <div class="skeleton-shimmer"></div>
+
     <div class="skeleton-content">
-      <img id="skeletonLogo" src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo.png" alt="Logo do Setor" class="skeleton-logo">
-      <div class="skeleton-text">Carregando painel...</div>
+      <img
+        id="skeletonLogo"
+        src="https://raw.githubusercontent.com/BImobit/BI/refs/heads/main/TI/IMAGENS/logo.png"
+        alt="Logo do Setor"
+        class="skeleton-logo"
+      >
+
+      <div class="skeleton-text">
+        Carregando painel...
+      </div>
     </div>
   </div>
 
@@ -111,93 +122,119 @@
     data-default-src=""
     allowfullscreen="true">
   </iframe>
+
 </div>
 
 <script>
+
   function hideSkeletonComDelay() {
     const sk = document.getElementById('skeleton');
+
     if (!sk) return;
 
     const delayMs = 1800;
 
     setTimeout(() => {
+
       sk.style.opacity = '0';
 
       setTimeout(() => {
         sk.style.display = 'none';
       }, 400);
+
     }, delayMs);
   }
 
+
   (function initFromQuery() {
+
     const params = new URLSearchParams(window.location.search);
-
-    const link = params.get('link') || '';
-    const datasetId = params.get('datasetId') || '';
-
-    /*
-      DATASET QUE DEVE ABRIR DIRETO
-    */
-    const DATASET_DIRETO = '99c236f1-0d93-4001-b012-151ceda4ce09';
-
-    /*
-      Se for esse dataset:
-      NÃO carrega skeleton
-      NÃO carrega iframe
-      NÃO mantém essa página
-
-      Vai direto para o Power BI.
-    */
-    if (
-      datasetId.toLowerCase() === DATASET_DIRETO.toLowerCase() &&
-      link
-    ) {
-      window.location.replace(link);
-      return;
-    }
-
-    // ------------------------------------------------
-    // Funcionamento normal para os demais dashboards
-    // ------------------------------------------------
 
     const frame = document.getElementById('pbFrame');
     const logo = document.getElementById('skeletonLogo');
 
     if (!frame) return;
 
+
+    // =====================================================
+    // PARÂMETROS DA URL
+    // =====================================================
+
+    const link =
+      params.get('link') ||
+      frame.dataset.defaultSrc ||
+      '';
+
     const title = params.get('title');
     const logoUrl = params.get('logo');
     const iconUrl = params.get('icon');
+
+
+    // =====================================================
+    // HTTP -> ABRE DIRETO
+    // =====================================================
+    //
+    // Exemplo:
+    // http://bi.mobit.com.br/orcamento-anual/login
+    //
+    // Não usa iframe.
+    // Não usa skeleton.
+    // Não permanece no redirect.html.
+    //
+
+    if (link.toLowerCase().startsWith('http://')) {
+      window.location.replace(link);
+      return;
+    }
+
+
+    // =====================================================
+    // HTTPS -> FUNCIONAMENTO NORMAL
+    // =====================================================
 
     if (title) {
       document.title = title;
     }
 
+
+    // Favicon personalizado
     if (iconUrl) {
+
       const fav = document.createElement('link');
+
       fav.rel = 'icon';
       fav.type = 'image/png';
       fav.href = iconUrl;
+
       document.head.appendChild(fav);
     }
 
+
+    // Logo personalizada do skeleton
     if (logo && logoUrl) {
       logo.src = logoUrl;
       logo.style.display = '';
     }
 
+
+    // Quando o iframe terminar de carregar,
+    // remove o skeleton após o delay
     frame.addEventListener(
       'load',
       hideSkeletonComDelay,
       { once: true }
     );
 
+
+    // Carrega o painel HTTPS
     if (link) {
       frame.src = link;
     } else {
       hideSkeletonComDelay();
     }
+
   })();
+
 </script>
 
 </body>
