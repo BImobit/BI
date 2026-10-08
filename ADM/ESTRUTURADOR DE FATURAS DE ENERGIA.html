@@ -1976,14 +1976,19 @@
     pages.forEach((txt, idx) => {
       // Instalacao (so existe nas paginas de fatura individual)
       let instalacao = "";
-      const mInst =
-        txt.match(/C[ÓO]DIGO\s+DA\s+INSTALA[ÇC][ÃA]O\s+(\d+)/i) ||
-        txt.match(/N[ÚU]MERO\s+DA\s+UNIDADE\s+CONSUMIDORA\s+(\d+(?:\.\d+)*(?:-\d+)?)/i);
+      const mInst = txt.match(/C[ÓO]DIGO\s+DA\s+INSTALA[ÇC][ÃA]O\s+(\d+)/i);
       if (mInst) instalacao = mInst[1];
 
+      // No modelo com apenas UC, esse numero preenche N_CLIENTE.
       let nCliente = "";
-      const mCli = txt.match(/C[ÓO]DIGO\s+DO\s+CLIENTE\s+(\d+)/i);
+      const mCli =
+        txt.match(/C[ÓO]DIGO\s+DO\s+CLIENTE\s+(\d+)/i) ||
+        txt.match(/N[ÚU]MERO\s+DA\s+UNIDADE\s+CONSUMIDORA\s+(\d+(?:\.\d+)*(?:-\d+)?)/i);
       if (mCli) nCliente = mCli[1];
+
+      // Quando so houver um identificador, preencher as duas colunas com ele.
+      if (!instalacao) instalacao = nCliente;
+      if (!nCliente) nCliente = instalacao;
 
       // Vencimento
       let vencimento = "";
@@ -2030,7 +2035,7 @@
       if (cons) consumoKwh = cons[1];
 
       // So entra se for pagina de fatura individual valida
-      if (!instalacao || !vencimento || !total) {
+      if ((!instalacao && !nCliente) || !vencimento || !total) {
         return;
       }
 
@@ -2661,7 +2666,7 @@ const nomeCount = {};
 
 // Baixa garantindo nome unico (evita sobrescrever faturas com mesmo UC/NF/venc)
 const baixarFatura = async (blob, f) => {
-  // Neoenergia/Cosern: inclui tambem o Codigo do Cliente no nome
+  // Neoenergia/Cosern: inclui o Codigo do Cliente ou UC no nome
   const cliente = (currentTipo === "cosern" || currentTipo === "neoenergia") ? (f.nCliente || "") : "";
   let nome = makePdfName(f.instalacao, f.notaFiscal, f.vencimento, 1, cliente);
   nomeCount[nome] = (nomeCount[nome] || 0) + 1;
