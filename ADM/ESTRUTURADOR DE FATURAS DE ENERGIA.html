@@ -1986,9 +1986,11 @@
         txt.match(/N[ÚU]MERO\s+DA\s+UNIDADE\s+CONSUMIDORA\s+(\d+(?:\.\d+)*(?:-\d+)?)/i);
       if (mCli) nCliente = mCli[1];
 
-      // Quando so houver um identificador, preencher as duas colunas com ele.
-      if (!instalacao) instalacao = nCliente;
+      // Identificador unico ou repetido fica somente em N_CLIENTE.
       if (!nCliente) nCliente = instalacao;
+      if (instalacao && instalacao.replace(/\D/g, "") === nCliente.replace(/\D/g, "")) {
+        instalacao = "";
+      }
 
       // Vencimento
       let vencimento = "";
