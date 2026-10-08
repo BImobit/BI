@@ -1969,14 +1969,16 @@
 
   // ✅ Parser COSERN / Neoenergia (LOTE: 1 PDF com varias faturas, 1 por pagina)
   // Paginas de "conta coletiva" (resumo) e de "Fale com a gente" sao ignoradas
-  // automaticamente porque nao tem CODIGO DA INSTALACAO.
+  // porque nao tem codigo da instalacao nem numero da unidade consumidora.
   function parseCosernFaturas(pages) {
     const resultados = [];
 
     pages.forEach((txt, idx) => {
       // Instalacao (so existe nas paginas de fatura individual)
       let instalacao = "";
-      const mInst = txt.match(/C[ÓO]DIGO\s+DA\s+INSTALA[ÇC][ÃA]O\s+(\d+)/i);
+      const mInst =
+        txt.match(/C[ÓO]DIGO\s+DA\s+INSTALA[ÇC][ÃA]O\s+(\d+)/i) ||
+        txt.match(/N[ÚU]MERO\s+DA\s+UNIDADE\s+CONSUMIDORA\s+(\d+(?:\.\d+)*(?:-\d+)?)/i);
       if (mInst) instalacao = mInst[1];
 
       let nCliente = "";
