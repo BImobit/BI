@@ -1974,16 +1974,18 @@
     const resultados = [];
 
     pages.forEach((txt, idx) => {
-      // Instalacao (so existe nas paginas de fatura individual)
+      // Instalacao: codigo antigo ou numero da unidade consumidora.
       let instalacao = "";
-      const mInst = txt.match(/C[ÓO]DIGO\s+DA\s+INSTALA[ÇC][ÃA]O\s+(\d+)/i);
+      const mInst =
+        txt.match(/C[ÓO]DIGO\s+DA\s+INSTALA[ÇC][ÃA]O\s+(\d+)/i) ||
+        txt.match(/N[ÚU]MERO\s+DA\s+UNIDADE\s+CONSUMIDORA\s+(\d+(?:\.\d+)*(?:-\d+)?)/i);
       if (mInst) instalacao = mInst[1];
 
-      // No modelo com apenas UC, esse numero preenche N_CLIENTE.
+      // Numero do cliente: codigo antigo ou codigo de debito em conta.
       let nCliente = "";
       const mCli =
         txt.match(/C[ÓO]DIGO\s+DO\s+CLIENTE\s+(\d+)/i) ||
-        txt.match(/N[ÚU]MERO\s+DA\s+UNIDADE\s+CONSUMIDORA\s+(\d+(?:\.\d+)*(?:-\d+)?)/i);
+        txt.match(/C[ÓO]DIGO\s+D[ÉE]BITO\s+EM\s+CONTA\s+(\d+)/i);
       if (mCli) nCliente = mCli[1];
 
       // Identificador unico ou repetido fica somente em N_CLIENTE.
